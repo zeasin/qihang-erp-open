@@ -1,68 +1,65 @@
 <template>
   <div class="app-container">
 
-        <print-tao v-if="shopType === 100"></print-tao>
-<!--        <print-jd v-if="shopType === 200"></print-jd>-->
-<!--        <print-jdvc v-if="shopType === 280"></print-jdvc>-->
-        <print-jd :shopType="200" v-if="shopType === 200"></print-jd>
-        <print-jd :shopType="280" v-if="shopType === 280"></print-jd>
-        <print-pdd v-if="shopType === 300"></print-pdd>
-        <print-dou v-if="shopType === 400"></print-dou>
-        <print-wei v-if="shopType === 500"></print-wei>
-        <print-ks v-if="shopType === 600"></print-ks>
-        <print-xhs v-if="shopType === 700"></print-xhs>
-        <print-list v-if="shopType === 999"></print-list>
-
+    <print-tao v-if="shopType === 100" />
+    <!--        <print-jd v-if="shopType === 200"></print-jd>-->
+    <!--        <print-jdvc v-if="shopType === 280"></print-jdvc>-->
+    <print-jd v-if="shopType === 200" :shop-type="200" />
+    <print-jd v-if="shopType === 280" :shop-type="280" />
+    <print-pdd v-if="shopType === 300" />
+    <print-dou v-if="shopType === 400" />
+    <print-wei v-if="shopType === 500" />
+    <print-ks v-if="shopType === 600" />
+    <print-xhs v-if="shopType === 700" />
+    <print-list v-if="shopType === 999" />
 
   </div>
 </template>
 
 <script>
-import printList from "@/views/shipping/ewaybillPrint/print_list.vue";
-import printListOffline from "@/views/shipping/ewaybillPrint/print_list_offline.vue";
-import printTao from "@/views/shipping/ewaybillPrint/tao/index.vue";
-import printPdd from "@/views/shipping/ewaybillPrint/pdd/index.vue";
-import printDou from "@/views/shipping/ewaybillPrint/dou/index.vue";
-import printJd from "@/views/shipping/ewaybillPrint/jd/index.vue";
-import printJdvc from "@/views/shipping/ewaybillPrint/jd/vc-order.vue";
-import printWei from "@/views/shipping/ewaybillPrint/wei/index.vue";
+import printTao from '@/views/shipping/ewaybillPrint/tao/index.vue'
+import printPdd from '@/views/shipping/ewaybillPrint/pdd/index.vue'
+import printDou from '@/views/shipping/ewaybillPrint/dou/index.vue'
+import printJd from '@/views/shipping/ewaybillPrint/jd/index.vue'
+import printJdvc from '@/views/shipping/ewaybillPrint/jd/vc-order.vue'
+import printWei from '@/views/shipping/ewaybillPrint/wei/index.vue'
 import CountTo from 'vue-count-to'
-import {getShop, listPlatform} from "@/api/shop/shop";
-import {waitOrderReport} from "@/api/order/order";
-import {todayWaybillList} from "@/api/order/ship_order";
-import printXhs from "@/views/shipping/ewaybillPrint/xhs/index.vue";
-import printKs from "@/views/shipping/ewaybillPrint/ks/index.vue";
-import {getUserProfile} from "@/api/system/user";
+import { getShop, listPlatform } from '@/api/shop/shop'
+import { waitOrderReport } from '@/api/order/order'
+import { todayWaybillList } from '@/api/order/ship_order'
+import printXhs from '@/views/shipping/ewaybillPrint/xhs/index.vue'
+import printKs from '@/views/shipping/ewaybillPrint/ks/index.vue'
+import { getUserProfile } from '@/api/system/user'
 export default {
-  name: "print",
-  components:{
+  name: 'Print',
+  components: {
     printKs, printXhs, CountTo,
-    printTao,printPdd,printDou,printJd,printWei,printJdvc,printList,printListOffline},
+    printTao, printPdd, printDou, printJd, printWei, printJdvc },
   data() {
     return {
-      shopId:null,
-      shopType:0,
-      shopName:null,
-      merchantId:null,
-    };
+      shopId: null,
+      shopType: 0,
+      shopName: null,
+      merchantId: null
+    }
   },
   created() {
 
   },
   mounted() {
-    getUserProfile().then(res=> {
-      this.loading = false;
+    getUserProfile().then(res => {
+      this.loading = false
       if (res.data.userType == 40) {
         getShop(res.data.deptId).then(response => {
           console.log(response)
           if (response.data) {
-            this.shopId = response.data.id;
-            this.merchantId = response.data.merchantId;
-            this.shopName = response.data.name;
-            this.shopType = response.data.type;
+            this.shopId = response.data.id
+            this.merchantId = response.data.merchantId
+            this.shopName = response.data.name
+            this.shopType = response.data.type
           }
         })
-      }else{
+      } else {
         this.$modal.msgError('非店铺用户')
       }
     })
@@ -70,7 +67,7 @@ export default {
   methods: {
 
   }
-};
+}
 </script>
 
 <style lang="scss" scoped>

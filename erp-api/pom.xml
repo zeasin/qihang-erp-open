@@ -97,11 +97,11 @@
         </dependency>
 
         <!-- ============ Spring AI 2.0 + RAG 知识库 ============ -->
-        <!-- ⚠️ DeepSeek 模型：默认禁用，配置 spring.ai.deepseek.api-key 后取消注释 -->
-        <!--        <dependency>-->
-        <!--            <groupId>org.springframework.ai</groupId>-->
-        <!--            <artifactId>spring-ai-starter-model-deepseek</artifactId>-->
-        <!--        </dependency>-->
+        <!-- DeepSeek 模型 -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-deepseek</artifactId>
+        </dependency>
         <!-- PGVector 向量存储（配置 EmbeddingModel + 数据库后启用） -->
         <!--        <dependency>-->
         <!--            <groupId>org.springframework.ai</groupId>-->

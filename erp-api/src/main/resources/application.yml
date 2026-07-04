@@ -1,5 +1,6 @@
 server:
   port: 8088
+
 spring:
   application:
     name: erp-api
@@ -41,6 +42,9 @@ spring:
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
+  ai:
+    deepseek:
+      api-key: ${DEEPSEEK_API_KEY:,'aa'}
 #  kafka:
 #    bootstrap-servers: localhost:9092
 #    producer:
@@ -91,6 +95,8 @@ deepseek:
     key:
     endpoint: https://api.deepseek.com/chat/completions
     model: deepseek-chat
+
+
 
 # Token 配置
 token:

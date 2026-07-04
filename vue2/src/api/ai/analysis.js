@@ -3,6 +3,15 @@ import request from '@/utils/request'
 // AI分析相关API（设置120秒超时，避免AI响应时间过长）
 const AI_TIMEOUT = 120000
 
+// 获取AI工作台简报
+export function getAiBrief() {
+  return request({
+    url: '/api/ai/brief',
+    method: 'get',
+    timeout: 30000
+  })
+}
+
 export function analyzeSales() {
   return request({
     url: '/api/erp-api/ai/analysis/sales',
