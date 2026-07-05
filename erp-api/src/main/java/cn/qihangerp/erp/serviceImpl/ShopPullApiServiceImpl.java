@@ -21,6 +21,12 @@ import cn.qihangerp.open.jd.response.JdOrderItemResponse;
 import cn.qihangerp.open.jd.response.JdGoodsSkuListResponse;
 import cn.qihangerp.open.jd.model.AfterSale;
 import cn.qihangerp.open.jd.model.Refund;
+import cn.qihangerp.open.dou.DouOrderApiHelper;
+import cn.qihangerp.open.dou.DouRefundApiHelper;
+import cn.qihangerp.open.dou.DouGoodsApiHelper;
+import cn.qihangerp.open.dou.model.GoodsListResultVo;
+import cn.qihangerp.open.dou.model.Goods;
+import cn.qihangerp.open.dou.model.GoodsSku;
 import cn.qihangerp.service.*;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -70,6 +76,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             case 300 -> pullPddOrder(shop, startTime, endTime, begin);
             case 100 -> pullTaoOrder(shop, startTime, endTime, begin);
             case 200 -> pullJdOrder(shop, startTime, endTime, begin);
+            case 400 -> pullDouOrder(shop, startTime, endTime, begin);
             default -> ResultVo.error("该平台(" + shop.getType() + ")订单拉取待实现");
         };
     }
@@ -82,6 +89,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             case 300 -> pullPddOrderDetail(shop, orderId, begin);
             case 100 -> pullTaoOrderDetail(shop, orderId, begin);
             case 200 -> pullJdOrderDetail(shop, orderId, begin);
+            case 400 -> pullDouOrderDetail(shop, orderId, begin);
             default -> ResultVo.error("该平台订单详情拉取待实现");
         };
     }
@@ -93,6 +101,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             case 300 -> pullPddRefund(shop, begin);
             case 100 -> pullTaoRefund(shop, begin);
             case 200 -> pullJdRefund(shop, begin);
+            case 400 -> pullDouRefund(shop, begin);
             default -> ResultVo.error("该平台售后拉取待实现");
         };
     }
@@ -105,6 +114,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             case 300 -> pullPddRefundDetail(shop, afterId, begin);
             case 100 -> pullTaoRefundDetail(shop, afterId, begin);
             case 200 -> pullJdRefundDetail(shop, afterId, begin);
+            case 400 -> pullDouRefundDetail(shop, afterId, begin);
             default -> ResultVo.error("该平台售后详情拉取待实现");
         };
     }
@@ -116,6 +126,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             case 300 -> pullPddGoods(shop, pullType == null ? 0 : pullType, begin);
             case 100 -> pullTaoGoods(shop, begin);
             case 200 -> pullJdGoods(shop, begin);
+            case 400 -> pullDouGoods(shop, begin);
             default -> ResultVo.error("该平台商品拉取待实现");
         };
     }
@@ -548,6 +559,178 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             logMsg(shop, "GOODS", "{}", "{success:" + success + "}", begin);
             return ResultVo.success("拉取成功" + success + "件");
         } catch (Exception ex) { return err(shop, "GOODS", "JD:" + ex.getMessage(), begin); }
+    }
+
+
+    // ======================== DOU 抖店 ========================
+
+    private ResultVo<String> pullDouOrder(OShop shop, String startTime, String endTime, long begin) {
+        var p = chk(shop, 400); if (p == null) return err(shop, "ORDER", "校验失败", begin);
+        LocalDateTime s = LocalDateTime.parse(startTime + " 00:00:01", DT);
+        LocalDateTime e = StringUtils.hasText(endTime) ? LocalDateTime.parse(endTime + " 23:59:59", DT) : LocalDateTime.parse(startTime + " 23:59:59", DT);
+        String pp = "{st:" + s.format(DT) + "}";
+        try {
+            var r = DouOrderApiHelper.pullOrderList(s.toEpochSecond(ZoneOffset.ofHours(8)) * 1000, e.toEpochSecond(ZoneOffset.ofHours(8)) * 1000, 1, 100, p.getAppKey(), p.getAppSecret(), p.getAccessToken());
+            if (r.getCode() != 0) return errLog(shop, "ORDER", r.getMsg(), pp, begin);
+            int ins = 0, upd = 0, fail = 0;
+            if (r.getList() != null) for (var order : r.getList()) {
+                try { var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), douOrder(order));
+                    if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+                    if (sr.getCode() == 0) ins++; else upd++;
+                } catch (Exception ex) { log.error("DOU订单保存失败", ex); fail++; }
+            }
+            logMsg(shop, "ORDER", pp, "{ins:" + ins + ",upd:" + upd + ",fail:" + fail + "}", begin);
+            return ResultVo.success("成功，新增" + ins + "，更新" + upd + "，失败" + fail);
+        } catch (Exception ex) { return err(shop, "ORDER", "DOU:" + ex.getMessage(), begin); }
+    }
+    private ShopOrder douOrder(cn.qihangerp.open.dou.model.order.Order order) {
+        ShopOrder o = new ShopOrder(); o.setPlatformType("DOU");
+        o.setOrderId(order.getOrderId());
+        o.setOrderTime(order.getCreateTime() != null ? order.getCreateTime() / 1000 : null);
+        o.setUpdateTime(order.getUpdateTime() != null ? order.getUpdateTime() / 1000 : null);
+        o.setOrderStatus(order.getOrderStatus() != null ? order.getOrderStatus() : 0);
+        o.setGoodsAmount(order.getOrderAmount() != null ? order.getOrderAmount().intValue() : 0);
+        o.setOrderAmount(order.getOrderAmount() != null ? order.getOrderAmount().intValue() : 0);
+        o.setFreight(order.getPostAmount() != null ? order.getPostAmount().intValue() : 0);
+        o.setDiscountAmount(order.getPromotionAmount() != null ? order.getPromotionAmount().intValue() : 0);
+        o.setPlatformDiscount(order.getPromotionPlatformAmount() != null ? order.getPromotionPlatformAmount().intValue() : 0);
+        o.setSellerDiscount(order.getPromotionShopAmount() != null ? order.getPromotionShopAmount().intValue() : 0);
+        o.setPayTime(order.getPayTime() != null ? order.getPayTime() / 1000 : null);
+        o.setPaymentMethod(order.getPayType() != null ? String.valueOf(order.getPayType()) : null);
+        o.setBuyerMemo(order.getUserNickName());
+        o.setFinishTime(order.getFinishTime() != null ? order.getFinishTime() / 1000 : null);
+        // 地址：PostAddrBean 的 province/city/town 是 TownBean 类型，取 name
+        if (order.getPostAddr() != null) {
+            var addr = order.getPostAddr();
+            o.setProvince(addr.getProvince() != null ? addr.getProvince().getName() : null);
+            o.setCity(addr.getCity() != null ? addr.getCity().getName() : null);
+            o.setCounty(addr.getTown() != null ? addr.getTown().getName() : null);
+            o.setAddress(addr.getDetail());
+            o.setReceiverName(order.getPostReceiver());
+            o.setReceiverPhone(order.getPostTel());
+        }
+        // 子订单
+        List<ShopOrderItem> items = new ArrayList<>();
+        if (order.getSkuOrderList() != null) for (var it : order.getSkuOrderList()) {
+            ShopOrderItem i = new ShopOrderItem();
+            i.setOrderId(order.getOrderId());
+            i.setSubOrderId(it.getMasterSkuOrderId());
+            i.setProductId(it.getProductIdStr());
+            i.setSkuId(it.getSkuId() != null ? it.getSkuId().toString() : null);
+            i.setTitle(it.getProductName());
+            i.setImg(it.getProductPic());
+            i.setQuantity(it.getItemNum());
+            i.setSalePrice(it.getOrderAmount() != null && it.getItemNum() > 0 ? it.getOrderAmount() / it.getItemNum() : 0);
+            i.setOuterSkuId(it.getOutSkuId());
+            if (it.getSpec() != null && !it.getSpec().isEmpty()) {
+                StringBuilder sb = new StringBuilder();
+                for (var sp : it.getSpec()) { sb.append(sp.getName()).append(":").append(sp.getValue()).append(";"); }
+                i.setSkuName(sb.toString());
+            }
+            i.setOrderTime(o.getOrderTime());
+            items.add(i);
+        }
+        o.setItems(items); o.setOrderType(0); o.setOrderMode(0); o.setErpShipStatus(0); o.setConfirmStatus(0);
+        return o;
+    }
+    private ResultVo<String> pullDouOrderDetail(OShop shop, String orderId, long begin) {
+        var p = chk(shop, 400); if (p == null) return err(shop, "ORDER", "校验失败", begin);
+        try {
+            var r = DouOrderApiHelper.pullOrderDetail(p.getAppKey(), p.getAppSecret(), p.getAccessToken(), orderId);
+            if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "ORDER", r.getMsg(), "{orderId:" + orderId + "}", begin);
+            var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), douOrder(r.getData()));
+            if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+            logMsg(shop, "ORDER", "{orderId:" + orderId + "}", "{}", begin);
+            return ResultVo.success("订单[" + orderId + "]同步完成");
+        } catch (Exception ex) { return err(shop, "ORDER", "DOU detail:" + ex.getMessage(), begin); }
+    }
+    private ResultVo<String> pullDouRefund(OShop shop, long begin) {
+        var p = chk(shop, 400); if (p == null) return err(shop, "REFUND", "校验失败", begin);
+        var lt = pullLasttimeService.getLasttimeByShop(shop.getId(), "REFUND");
+        LocalDateTime st = lt == null ? LocalDateTime.now().minusDays(1) : lt.getLasttime().minusMinutes(5);
+        LocalDateTime et = LocalDateTime.now();
+        String pp = "{st:" + st.format(DT) + "}";
+        try {
+            var r = DouRefundApiHelper.pullAfterSaleList(st.toEpochSecond(ZoneOffset.ofHours(8)) * 1000, et.toEpochSecond(ZoneOffset.ofHours(8)) * 1000, 1, 100, p.getAppKey(), p.getAppSecret(), p.getAccessToken());
+            if (r.getCode() != 0) return errLog(shop, "REFUND", r.getMsg(), pp, begin);
+            int ins = 0, fail = 0;
+            if (r.getList() != null) for (var rf : r.getList()) {
+                try { ShopRefund sr = douRefund(rf);
+                    var rr = shopRefundService.saveRefund(shop.getId(), sr);
+                    if (rr.getData() != null) { oRefundService.shopRefundMessage(rr.getData()); ins++; } else fail++;
+                } catch (Exception ex) { log.error("DOU退款保存失败", ex); fail++; }
+            }
+            if (fail == 0) upsertLt(shop.getId(), "REFUND", et, lt);
+            logMsg(shop, "REFUND", pp, "{ins:" + ins + ",fail:" + fail + "}", begin);
+            return ResultVo.success("成功，新增" + ins + "条");
+        } catch (Exception ex) { return err(shop, "REFUND", "DOU:" + ex.getMessage(), begin); }
+    }
+    private ResultVo<String> pullDouRefundDetail(OShop shop, String afterId, long begin) {
+        // DOU售后详情可以通过pullAfterSaleList全量过滤（无独立详情接口）
+        return pullDouRefund(shop, begin);
+    }
+    private ShopRefund douRefund(cn.qihangerp.open.dou.model.after.AfterSale rf) {
+        ShopRefund r = new ShopRefund(); r.setPlatformType("DOU");
+        var af = rf.getAftersaleInfo();
+        if (af != null) {
+            r.setAfterId(af.getAftersaleId());
+            r.setType(af.getAftersaleType());
+            r.setStatus(af.getAftersaleStatus());
+            r.setCount(af.getAftersaleNum());
+            r.setRefundAmount(af.getRefundAmount() != null ? af.getRefundAmount() : 0);
+            r.setCreateTime(af.getCreateTime() != null ? af.getCreateTime().longValue() : null);
+            r.setUpdateTime(af.getUpdateTime() != null ? af.getUpdateTime().longValue() : null);
+            r.setReturnWaybillId(af.getReturnLogisticsCode());
+            r.setReturnDeliveryName(af.getReturnLogisticsCompanyName());
+        }
+        if (rf.getOrderInfo() != null) {
+            r.setOrderId(rf.getOrderInfo().getShopOrderId());
+            if (rf.getOrderInfo().getRelatedOrderInfo() != null && !rf.getOrderInfo().getRelatedOrderInfo().isEmpty()) {
+                var ro = rf.getOrderInfo().getRelatedOrderInfo().get(0);
+                r.setProductId(ro.getProductId() != null ? ro.getProductId().toString() : null);
+                r.setGoodsName(ro.getProductName()); r.setGoodsImage(ro.getProductImage());
+                r.setSkuId(ro.getShopSkuCode());
+                r.setCount(ro.getAftersaleItemNum());
+            }
+        }
+        r.setReason(rf.getTextPart() != null ? rf.getTextPart().getReasonText() : null);
+        return r;
+    }
+    private ResultVo<String> pullDouGoods(OShop shop, long begin) {
+        var p = chk(shop, 400); if (p == null) return err(shop, "GOODS", "校验失败", begin);
+        try {
+            var r = DouGoodsApiHelper.getGoodsList(p.getAppKey(), p.getAppSecret(), p.getAccessToken(), 1, 20);
+            if (r.getCode() != 0) return errLog(shop, "GOODS", r.getMsg(), "{}", begin);
+            int success = 0;
+            if (r.getData() != null && r.getData().getGoodsList() != null) for (var g : r.getData().getGoodsList()) {
+                try { ShopGoods sg = douGoods(g);
+                    shopGoodsService.savePddGoods(sg, shop.getId()); success++;
+                } catch (Exception ex) { log.error("DOU商品保存失败", ex); }
+            }
+            logMsg(shop, "GOODS", "{}", "{success:" + success + "}", begin);
+            return ResultVo.success("拉取成功" + success + "件");
+        } catch (Exception ex) { return err(shop, "GOODS", "DOU:" + ex.getMessage(), begin); }
+    }
+    private ShopGoods douGoods(Goods g) {
+        ShopGoods sg = new ShopGoods(); if (g == null) return sg;
+        sg.setProductId(g.getProductId() != null ? g.getProductId().toString() : null);
+        sg.setTitle(g.getName()); sg.setImg(g.getImg());
+        sg.setOuterProductId(g.getOuterProductId());
+        sg.setStatus(g.getStatus()); sg.setMinPrice(g.getDiscountPrice());
+        sg.setMarketPrice(g.getMarketPrice());
+        sg.setAddTime(g.getCreateTime() != null ? g.getCreateTime().longValue() : null);
+        List<ShopGoodsSku> skuList = new ArrayList<>();
+        if (g.getSkuList() != null) for (var s : g.getSkuList()) {
+            ShopGoodsSku sk = new ShopGoodsSku(); sk.setSkuId(s.getCode());
+            sk.setOuterSkuId(s.getOutSkuId() != null ? s.getOutSkuId().toString() : null);
+            sk.setPrice(s.getPrice()); sk.setStockNum(s.getStockNum());
+            sk.setSkuName((s.getSpecDetailName1() != null ? s.getSpecDetailName1() : "")
+                + (s.getSpecDetailName2() != null ? ";" + s.getSpecDetailName2() : "")
+                + (s.getSpecDetailName3() != null ? ";" + s.getSpecDetailName3() : ""));
+            sk.setStatus(s.isSkuStatus() ? 1 : 0);
+            skuList.add(sk);
+        }
+        sg.setSkuList(skuList); return sg;
     }
 
     // ======================== 工具 ========================
