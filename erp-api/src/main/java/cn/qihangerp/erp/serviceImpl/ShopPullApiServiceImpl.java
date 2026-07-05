@@ -12,6 +12,15 @@ import cn.qihangerp.open.pdd.PddRefundApiHelper;
 import cn.qihangerp.open.tao.TaoGoodsApiHelper;
 import cn.qihangerp.open.tao.TaoOrderApiHelper;
 import cn.qihangerp.open.tao.TaoRefundApiHelper;
+import cn.qihangerp.open.jd.JdOrderApiHelper;
+import cn.qihangerp.open.jd.JdGoodsApiHelper;
+import cn.qihangerp.open.jd.JdAfterSaleApiHelper;
+import cn.qihangerp.open.jd.response.JdOrderListResponse;
+import cn.qihangerp.open.jd.response.JdOrderDetailResponse;
+import cn.qihangerp.open.jd.response.JdOrderItemResponse;
+import cn.qihangerp.open.jd.response.JdGoodsSkuListResponse;
+import cn.qihangerp.open.jd.model.AfterSale;
+import cn.qihangerp.open.jd.model.Refund;
 import cn.qihangerp.service.*;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -60,6 +69,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
         return switch (shop.getType()) {
             case 300 -> pullPddOrder(shop, startTime, endTime, begin);
             case 100 -> pullTaoOrder(shop, startTime, endTime, begin);
+            case 200 -> pullJdOrder(shop, startTime, endTime, begin);
             default -> ResultVo.error("该平台(" + shop.getType() + ")订单拉取待实现");
         };
     }
@@ -71,6 +81,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
         return switch (shop.getType()) {
             case 300 -> pullPddOrderDetail(shop, orderId, begin);
             case 100 -> pullTaoOrderDetail(shop, orderId, begin);
+            case 200 -> pullJdOrderDetail(shop, orderId, begin);
             default -> ResultVo.error("该平台订单详情拉取待实现");
         };
     }
@@ -81,6 +92,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
         return switch (shop.getType()) {
             case 300 -> pullPddRefund(shop, begin);
             case 100 -> pullTaoRefund(shop, begin);
+            case 200 -> pullJdRefund(shop, begin);
             default -> ResultVo.error("该平台售后拉取待实现");
         };
     }
@@ -92,6 +104,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
         return switch (shop.getType()) {
             case 300 -> pullPddRefundDetail(shop, afterId, begin);
             case 100 -> pullTaoRefundDetail(shop, afterId, begin);
+            case 200 -> pullJdRefundDetail(shop, afterId, begin);
             default -> ResultVo.error("该平台售后详情拉取待实现");
         };
     }
@@ -102,6 +115,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
         return switch (shop.getType()) {
             case 300 -> pullPddGoods(shop, pullType == null ? 0 : pullType, begin);
             case 100 -> pullTaoGoods(shop, begin);
+            case 200 -> pullJdGoods(shop, begin);
             default -> ResultVo.error("该平台商品拉取待实现");
         };
     }
@@ -368,6 +382,172 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             skuList.add(sk);
         }
         sg.setSkuList(skuList); return sg;
+    }
+
+    // ======================== JD 京东POP ========================
+
+    private ResultVo<String> pullJdOrder(OShop shop, String startTime, String endTime, long begin) {
+        var p = chk(shop, 200); if (p == null) return err(shop, "ORDER", "校验失败", begin);
+        LocalDateTime s = LocalDateTime.parse(startTime + " 00:00:01", DT);
+        LocalDateTime e = StringUtils.hasText(endTime) ? LocalDateTime.parse(endTime + " 23:59:59", DT) : LocalDateTime.parse(startTime + " 23:59:59", DT);
+        String pp = "{st:" + s.format(DT) + "}";
+        try {
+            var r = JdOrderApiHelper.pullOrder(s, e, p.getAppKey(), p.getAppSecret(), p.getAccessToken());
+            if (r.getCode() != 0) return errLog(shop, "ORDER", r.getMsg(), pp, begin);
+            int ins = 0, upd = 0, fail = 0;
+            if (r.getList() != null) for (var t : r.getList()) {
+                try { var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), jdOrder(t));
+                    if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+                    if (sr.getCode() == 0) ins++; else upd++;
+                } catch (Exception ex) { log.error("JD订单保存失败", ex); fail++; }
+            }
+            logMsg(shop, "ORDER", pp, "{ins:" + ins + ",upd:" + upd + ",fail:" + fail + "}", begin);
+            return ResultVo.success("成功，新增" + ins + "，更新" + upd + "，失败" + fail);
+        } catch (Exception ex) { return err(shop, "ORDER", "JD:" + ex.getMessage(), begin); }
+    }
+    private ShopOrder jdOrder(JdOrderListResponse t) {
+        ShopOrder o = new ShopOrder(); o.setPlatformType("JD"); o.setOrderId(t.getOrderId());
+        o.setPlatformOrderStatus(t.getOrderState()); o.setOrderStatus(jdStatus(t.getOrderState()));
+        o.setGoodsAmount(fen(t.getOrderTotalPrice())); o.setOrderAmount(fen(t.getOrderPayment()));
+        o.setPaymentAmount(fen(t.getOrderPayment())); o.setFreight(fen(t.getFreightPrice()));
+        o.setSellerDiscount(fen(t.getSellerDiscount()));
+        o.setPaymentMethod(t.getPayType());
+        o.setOrderTimeText(t.getOrderStartTime()); o.setUpdateTimeText(t.getModified());
+        o.setOrderTime(ts(t.getOrderStartTime())); o.setUpdateTime(ts(t.getModified()));
+        o.setPayTime(ts(t.getPaymentConfirmTime())); o.setFinishTime(ts(t.getOrderEndTime()));
+        o.setRemark(t.getOrderRemark());
+        if (t.getConsigneeInfo() != null) {
+            o.setProvince(t.getConsigneeInfo().getProvince()); o.setCity(t.getConsigneeInfo().getCity());
+            o.setCounty(t.getConsigneeInfo().getCounty()); o.setTown(t.getConsigneeInfo().getTown());
+            o.setAddress(t.getConsigneeInfo().getFullAddress());
+            o.setReceiverName(t.getConsigneeInfo().getFullname());
+            o.setReceiverPhone(t.getConsigneeInfo().getMobile());
+        }
+        List<ShopOrderItem> items = new ArrayList<>();
+        if (t.getItemInfoList() != null) for (var it : t.getItemInfoList()) {
+            ShopOrderItem i = new ShopOrderItem(); i.setOrderId(t.getOrderId());
+            i.setProductId(it.getWareId()); i.setSkuId(it.getSkuId());
+            i.setTitle(it.getSkuName()); i.setQuantity(it.getItemTotal() != null ? Integer.parseInt(it.getItemTotal()) : 0);
+            i.setSalePrice(fen(it.getJdPrice())); i.setOuterSkuId(it.getOuterSkuId());
+            i.setOrderTime(o.getOrderTime()); items.add(i);
+        }
+        o.setItems(items); o.setOrderType(0); o.setOrderMode(0); o.setErpShipStatus(0); o.setConfirmStatus(0);
+        return o;
+    }
+    private Integer jdStatus(String s) {
+        if (s == null) return 21;
+        return switch (s) {
+            case "WAIT_SELLER_STOCK_OUT", "WAIT_SELLER_DELIVERY" -> 1;
+            case "WAIT_GOODS_RECEIVE_CONFIRM" -> 2; case "TRADE_FINISHED" -> 3;
+            case "TRADE_CANCELED" -> 11; case "LOCKED" -> 22; default -> 21;
+        };
+    }
+    private ResultVo<String> pullJdOrderDetail(OShop shop, String orderId, long begin) {
+        var p = chk(shop, 200); if (p == null) return err(shop, "ORDER", "校验失败", begin);
+        try {
+            var r = JdOrderApiHelper.pullOrderDetail(Long.parseLong(orderId), p.getAppKey(), p.getAppSecret(), p.getAccessToken());
+            if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "ORDER", r.getMsg(), "{orderId:" + orderId + "}", begin);
+            var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), jdOrder(r.getData()));
+            if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+            logMsg(shop, "ORDER", "{orderId:" + orderId + "}", "{}", begin);
+            return ResultVo.success("订单[" + orderId + "]同步完成");
+        } catch (Exception ex) { return err(shop, "ORDER", "JD detail:" + ex.getMessage(), begin); }
+    }
+    private ShopOrder jdOrder(JdOrderDetailResponse t) {
+        ShopOrder o = new ShopOrder(); o.setPlatformType("JD"); o.setOrderId(t.getOrderId());
+        o.setPlatformOrderStatus(t.getOrderState()); o.setOrderStatus(jdStatus(t.getOrderState()));
+        o.setGoodsAmount(fen(t.getOrderTotalPrice())); o.setOrderAmount(fen(t.getOrderPayment()));
+        o.setPaymentAmount(fen(t.getOrderPayment())); o.setFreight(fen(t.getFreightPrice()));
+        o.setSellerDiscount(fen(t.getSellerDiscount()));
+        o.setPaymentMethod(t.getPayType());
+        o.setOrderTimeText(t.getOrderStartTime()); o.setUpdateTimeText(t.getModified());
+        o.setOrderTime(ts(t.getOrderStartTime())); o.setUpdateTime(ts(t.getModified()));
+        o.setPayTime(ts(t.getPaymentConfirmTime()));
+        o.setRemark(t.getOrderRemark());
+        if (t.getConsigneeInfo() != null) {
+            o.setProvince(t.getConsigneeInfo().getProvince()); o.setCity(t.getConsigneeInfo().getCity());
+            o.setCounty(t.getConsigneeInfo().getCounty()); o.setTown(t.getConsigneeInfo().getTown());
+            o.setAddress(t.getConsigneeInfo().getFullAddress());
+            o.setReceiverName(t.getConsigneeInfo().getFullname());
+            o.setReceiverPhone(t.getConsigneeInfo().getMobile());
+        }
+        List<ShopOrderItem> items = new ArrayList<>();
+        if (t.getItemInfoList() != null) for (var it : t.getItemInfoList()) {
+            ShopOrderItem i = new ShopOrderItem(); i.setOrderId(t.getOrderId());
+            i.setProductId(it.getWareId()); i.setSkuId(it.getSkuId());
+            i.setTitle(it.getSkuName()); i.setQuantity(it.getItemTotal() != null ? Integer.parseInt(it.getItemTotal()) : 0);
+            i.setSalePrice(fen(it.getJdPrice())); i.setOuterSkuId(it.getOuterSkuId());
+            i.setOrderTime(o.getOrderTime()); items.add(i);
+        }
+        o.setItems(items); o.setOrderType(0); o.setOrderMode(0); o.setErpShipStatus(0); o.setConfirmStatus(0);
+        return o;
+    }
+    private ResultVo<String> pullJdRefund(OShop shop, long begin) {
+        var p = chk(shop, 200); if (p == null) return err(shop, "REFUND", "校验失败", begin);
+        var lt = pullLasttimeService.getLasttimeByShop(shop.getId(), "REFUND");
+        LocalDateTime st = lt == null ? LocalDateTime.now().minusDays(1) : lt.getLasttime().minusMinutes(5);
+        LocalDateTime et = LocalDateTime.now();
+        String pp = "{st:" + st.format(DT) + "}";
+        try {
+            var r = JdAfterSaleApiHelper.pullAfterSaleList(Long.parseLong(p.getSellerId()), st, et, p.getAppKey(), p.getAppSecret(), p.getAccessToken());
+            if (r.getCode() != 0) return errLog(shop, "REFUND", r.getMsg(), pp, begin);
+            int ins = 0, fail = 0;
+            if (r.getList() != null) for (var rf : r.getList()) {
+                try { ShopRefund sr = jdRefund(rf);
+                    var rr = shopRefundService.saveRefund(shop.getId(), sr);
+                    if (rr.getData() != null) { oRefundService.shopRefundMessage(rr.getData()); ins++; } else fail++;
+                } catch (Exception ex) { log.error("JD退款保存失败", ex); fail++; }
+            }
+            if (fail == 0) upsertLt(shop.getId(), "REFUND", et, lt);
+            logMsg(shop, "REFUND", pp, "{ins:" + ins + ",fail:" + fail + "}", begin);
+            return ResultVo.success("成功，新增" + ins + "条");
+        } catch (Exception ex) { return err(shop, "REFUND", "JD:" + ex.getMessage(), begin); }
+    }
+    private ResultVo<String> pullJdRefundDetail(OShop shop, String afterId, long begin) {
+        var p = chk(shop, 200); if (p == null) return err(shop, "REFUND", "校验失败", begin);
+        try {
+            var r = JdAfterSaleApiHelper.pullAfterSaleList(Long.parseLong(p.getSellerId()), null, null, p.getAppKey(), p.getAppSecret(), p.getAccessToken());
+            if (r.getCode() != 0 || r.getList() == null) return errLog(shop, "REFUND", r.getMsg(), "{afterId:" + afterId + "}", begin);
+            // JD售后详情没有独立接口，通过列表按serviceId/applyId过滤
+            AfterSale found = null;
+            for (var rf : r.getList()) {
+                if (rf.getServiceId() != null && afterId.equals(rf.getServiceId().toString())) { found = rf; break; }
+                if (rf.getApplyId() != null && afterId.equals(rf.getApplyId().toString())) { found = rf; break; }
+            }
+            if (found == null) return ResultVo.error("未找到售后单");
+            var rr = shopRefundService.saveRefund(shop.getId(), jdRefund(found));
+            if (rr.getData() != null) oRefundService.shopRefundMessage(rr.getData());
+            logMsg(shop, "REFUND", "{afterId:" + afterId + "}", "{}", begin);
+            return ResultVo.success("售后[" + afterId + "]同步完成");
+        } catch (Exception ex) { return err(shop, "REFUND", "JD detail:" + ex.getMessage(), begin); }
+    }
+    private ShopRefund jdRefund(AfterSale rf) {
+        ShopRefund r = new ShopRefund(); r.setPlatformType("JD");
+        r.setAfterId(rf.getServiceId() != null ? rf.getServiceId().toString() : (rf.getApplyId() != null ? rf.getApplyId().toString() : null));
+        r.setType(rf.getCustomerExpect()); r.setRefundStatus(rf.getApproveResult());
+        r.setOrderId(rf.getOrderId() != null ? rf.getOrderId().toString() : null);
+        r.setRefundAmount(fen(rf.getActualPayPrice()));
+        r.setGoodsName(rf.getWareName()); r.setSkuId(rf.getSkuId() != null ? rf.getSkuId().toString() : null);
+        r.setCreateTime(ts(rf.getApplyTime())); r.setUpdateTime(ts(rf.getUpdateDate()));
+        r.setReturnDeliveryName(rf.getPickwareAddress());
+        return r;
+    }
+    private ResultVo<String> pullJdGoods(OShop shop, long begin) {
+        var p = chk(shop, 200); if (p == null) return err(shop, "GOODS", "校验失败", begin);
+        try {
+            var r = JdGoodsApiHelper.pullGoodsSkuList(p.getAppKey(), p.getAppSecret(), p.getAccessToken());
+            if (r.getCode() != 0) return errLog(shop, "GOODS", r.getMsg(), "{}", begin);
+            int success = 0;
+            if (r.getList() != null) for (var g : r.getList()) {
+                try { ShopGoods sg = new ShopGoods(); sg.setProductId(g.getSkuId() != null ? g.getSkuId().toString() : null);
+                    sg.setTitle(g.getSkuName()); sg.setImg(g.getLogo());
+                    sg.setOuterProductId(g.getOuterId()); sg.setMinPrice(g.getJdPrice());
+                    shopGoodsService.savePddGoods(sg, shop.getId()); success++;
+                } catch (Exception ex) { log.error("JD商品保存失败", ex); }
+            }
+            logMsg(shop, "GOODS", "{}", "{success:" + success + "}", begin);
+            return ResultVo.success("拉取成功" + success + "件");
+        } catch (Exception ex) { return err(shop, "GOODS", "JD:" + ex.getMessage(), begin); }
     }
 
     // ======================== 工具 ========================
