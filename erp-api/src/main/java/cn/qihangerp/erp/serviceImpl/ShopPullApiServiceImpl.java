@@ -33,6 +33,10 @@ import cn.qihangerp.open.wei.WeiGoodsApiHelper;
 import cn.qihangerp.open.wei.model.Order;
 import cn.qihangerp.open.wei.model.AfterSaleOrder;
 import cn.qihangerp.open.wei.model.Product;
+import cn.qihangerp.open.kwai.KwaiOrderApiHelper;
+import cn.qihangerp.open.kwai.KwaiGoodsApiHelper;
+import cn.qihangerp.open.kwai.KwaiRefundApiHelper;
+import cn.qihangerp.open.kwai.model.KwaiGoodsItem;
 import cn.qihangerp.service.*;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -915,6 +919,157 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             if (s.getSku_attrs() != null && !s.getSku_attrs().isEmpty()) {
                 sk.setSkuName(s.getSku_attrs().toJSONString());
             }
+            skuList.add(sk);
+        }
+        sg.setSkuList(skuList); return sg;
+    }
+
+
+    // ======================== KWAI 快手 ========================
+
+    private ResultVo<String> pullKwaiOrder(OShop shop, String startTime, String endTime, long begin) {
+        var p = chk(shop, 600); if (p == null) return err(shop, "ORDER", "校验失败", begin);
+        LocalDateTime s = LocalDateTime.parse(startTime + " 00:00:01", DT);
+        LocalDateTime e = StringUtils.hasText(endTime) ? LocalDateTime.parse(endTime + " 23:59:59", DT) : LocalDateTime.parse(startTime + " 23:59:59", DT);
+        long stMs = s.toEpochSecond(ZoneOffset.ofHours(8)) * 1000;
+        long etMs = e.toEpochSecond(ZoneOffset.ofHours(8)) * 1000;
+        String pp = "{st:" + s.format(DT) + "}";
+        try {
+            var r = KwaiOrderApiHelper.pullOrderList(p.getAppKey(), p.getAppSecret(), p.getAppSecret(), p.getAccessToken(), stMs, etMs);
+            if (r.getCode() != 0) return errLog(shop, "ORDER", r.getMsg(), pp, begin);
+            int ins = 0, upd = 0, fail = 0;
+            if (r.getList() != null) for (var t : r.getList()) {
+                try { ShopOrder o = kwaiOrder(t);
+                    var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), o);
+                    if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+                    if (sr.getCode() == 0) ins++; else upd++;
+                } catch (Exception ex) { log.error("KWAI订单保存失败", ex); fail++; }
+            }
+            logMsg(shop, "ORDER", pp, "{ins:" + ins + ",upd:" + upd + ",fail:" + fail + "}", begin);
+            return ResultVo.success("成功，新增" + ins + "，更新" + upd + "，失败" + fail);
+        } catch (Exception ex) { return err(shop, "ORDER", "KWAI:" + ex.getMessage(), begin); }
+    }
+    private ShopOrder kwaiOrder(JSONObject t) {
+        ShopOrder o = new ShopOrder(); o.setPlatformType("KWAI");
+        o.setOrderId(t.getString("orderId"));
+        o.setOrderTime(t.getLong("createTime") != null ? t.getLong("createTime") / 1000 : null);
+        o.setUpdateTime(t.getLong("updateTime") != null ? t.getLong("updateTime") / 1000 : null);
+        o.setOrderStatus(t.getIntValue("orderStatus") != 0 ? t.getIntValue("orderStatus") : 1);
+        // 订单金额(分)
+        JSONObject orderDetail = t.getJSONObject("orderDetail");
+        if (orderDetail != null) {
+            o.setOrderAmount(orderDetail.getIntValue("payAmount"));
+            o.setPaymentAmount(orderDetail.getIntValue("payAmount"));
+            o.setGoodsAmount(orderDetail.getIntValue("productAmount"));
+            o.setFreight(orderDetail.getIntValue("freightAmount"));
+            o.setDiscountAmount(orderDetail.getIntValue("discountAmount"));
+            o.setPayTime(orderDetail.getLong("payTime") != null ? orderDetail.getLong("payTime") / 1000 : null);
+        }
+        // 收货地址
+        JSONObject receiver = t.getJSONObject("receiverInfo");
+        if (receiver != null) {
+            o.setProvince(receiver.getString("provinceName")); o.setCity(receiver.getString("cityName"));
+            o.setCounty(receiver.getString("townName")); o.setAddress(receiver.getString("detailAddress"));
+            o.setReceiverName(receiver.getString("userName")); o.setReceiverPhone(receiver.getString("mobile"));
+        }
+        // 商品明细(快手返回的itemList)
+        JSONArray itemList = t.getJSONArray("itemList");
+        List<ShopOrderItem> items = new ArrayList<>();
+        if (itemList != null) for (int i = 0; i < itemList.size(); i++) {
+            JSONObject it = itemList.getJSONObject(i);
+            ShopOrderItem si = new ShopOrderItem(); si.setOrderId(t.getString("orderId"));
+            si.setProductId(it.getString("productId")); si.setSkuId(it.getString("skuId"));
+            si.setTitle(it.getString("name")); si.setImg(it.getString("pictureUrl"));
+            si.setQuantity(it.getIntValue("count")); si.setSalePrice(it.getIntValue("price") / (it.getIntValue("count") > 0 ? it.getIntValue("count") : 1));
+            si.setOrderTime(o.getOrderTime()); items.add(si);
+        }
+        o.setItems(items);
+        o.setOrderType(0); o.setOrderMode(0); o.setErpShipStatus(0); o.setConfirmStatus(0);
+        return o;
+    }
+    private ResultVo<String> pullKwaiOrderDetail(OShop shop, String orderId, long begin) {
+        var p = chk(shop, 600); if (p == null) return err(shop, "ORDER", "校验失败", begin);
+        try {
+            var r = KwaiOrderApiHelper.pullOrderDetail(p.getAppKey(), p.getAppSecret(), p.getAppSecret(), p.getAccessToken(), orderId);
+            if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "ORDER", r.getMsg(), "{orderId:" + orderId + "}", begin);
+            var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), kwaiOrder(r.getData()));
+            if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+            logMsg(shop, "ORDER", "{orderId:" + orderId + "}", "{}", begin);
+            return ResultVo.success("订单[" + orderId + "]同步完成");
+        } catch (Exception ex) { return err(shop, "ORDER", "KWAI detail:" + ex.getMessage(), begin); }
+    }
+    private ResultVo<String> pullKwaiRefund(OShop shop, long begin) {
+        var p = chk(shop, 600); if (p == null) return err(shop, "REFUND", "校验失败", begin);
+        var lt = pullLasttimeService.getLasttimeByShop(shop.getId(), "REFUND");
+        LocalDateTime st = lt == null ? LocalDateTime.now().minusDays(7) : lt.getLasttime().minusMinutes(5);
+        LocalDateTime et = LocalDateTime.now();
+        long stMs = st.toEpochSecond(ZoneOffset.ofHours(8)) * 1000;
+        long etMs = et.toEpochSecond(ZoneOffset.ofHours(8)) * 1000;
+        String pp = "{st:" + st.format(DT) + "}";
+        try {
+            var r = KwaiRefundApiHelper.pullRefundList(p.getAppKey(), p.getAppSecret(), p.getAppSecret(), p.getAccessToken(), stMs, etMs);
+            if (r.getCode() != 0) return errLog(shop, "REFUND", r.getMsg(), pp, begin);
+            int ins = 0, fail = 0;
+            if (r.getList() != null) for (var rf : r.getList()) {
+                try { var rr = shopRefundService.saveRefund(shop.getId(), kwaiRefund(rf));
+                    if (rr.getData() != null) { oRefundService.shopRefundMessage(rr.getData()); ins++; } else fail++;
+                } catch (Exception ex) { log.error("KWAI退款保存失败", ex); fail++; }
+            }
+            if (fail == 0) upsertLt(shop.getId(), "REFUND", et, lt);
+            logMsg(shop, "REFUND", pp, "{ins:" + ins + ",fail:" + fail + "}", begin);
+            return ResultVo.success("成功，新增" + ins + "条");
+        } catch (Exception ex) { return err(shop, "REFUND", "KWAI:" + ex.getMessage(), begin); }
+    }
+    private ResultVo<String> pullKwaiRefundDetail(OShop shop, String afterId, long begin) {
+        return pullKwaiRefund(shop, begin);
+    }
+    private ShopRefund kwaiRefund(JSONObject rf) {
+        ShopRefund r = new ShopRefund(); r.setPlatformType("KWAI");
+        r.setAfterId(rf.getString("refundId") != null ? rf.getString("refundId") : rf.getString("id"));
+        r.setOrderId(rf.getString("orderId"));
+        r.setType(rf.getIntValue("refundType"));
+        r.setStatus(rf.getIntValue("refundStatus"));
+        r.setRefundAmount(rf.getIntValue("refundAmount"));
+        r.setReason(rf.getString("reason"));
+        r.setCreateTime(rf.getLong("createTime") != null ? rf.getLong("createTime") / 1000 : null);
+        r.setUpdateTime(rf.getLong("updateTime") != null ? rf.getLong("updateTime") / 1000 : null);
+        JSONObject itemInfo = rf.getJSONObject("itemInfo");
+        if (itemInfo != null) {
+            r.setProductId(itemInfo.getString("productId"));
+            r.setGoodsName(itemInfo.getString("productName"));
+            r.setSkuId(itemInfo.getString("skuId"));
+            r.setCount(itemInfo.getIntValue("count"));
+            r.setGoodsPrice(itemInfo.getIntValue("price"));
+        }
+        return r;
+    }
+    private ResultVo<String> pullKwaiGoods(OShop shop, long begin) {
+        var p = chk(shop, 600); if (p == null) return err(shop, "GOODS", "校验失败", begin);
+        try {
+            var r = KwaiGoodsApiHelper.pullGoodsAll(p.getAppKey(), p.getAppSecret(), p.getAppSecret(), p.getAccessToken());
+            if (r.getCode() != 0) return errLog(shop, "GOODS", r.getMsg(), "{}", begin);
+            int success = 0;
+            if (r.getList() != null) for (var g : r.getList()) {
+                try { shopGoodsService.savePddGoods(kwaiGoods(g), shop.getId()); success++; } catch (Exception ex) { log.error("KWAI商品保存失败", ex); }
+            }
+            logMsg(shop, "GOODS", "{}", "{success:" + success + "}", begin);
+            return ResultVo.success("拉取成功" + success + "件");
+        } catch (Exception ex) { return err(shop, "GOODS", "KWAI:" + ex.getMessage(), begin); }
+    }
+    private ShopGoods kwaiGoods(KwaiGoodsItem g) {
+        ShopGoods sg = new ShopGoods(); if (g == null) return sg;
+        sg.setProductId(g.getKwaiItemId() != null ? g.getKwaiItemId().toString() : null);
+        sg.setTitle(g.getTitle()); sg.setImg(g.getMainImageUrl());
+        sg.setOuterProductId(g.getRelItemId() != null ? g.getRelItemId().toString() : null);
+        sg.setStatus(g.getShelfStatus()); sg.setMinPrice(g.getPrice());
+        sg.setAddTime(g.getCreateTime());
+        List<ShopGoodsSku> skuList = new ArrayList<>();
+        if (g.getSkuList() != null) for (var s : g.getSkuList()) {
+            ShopGoodsSku sk = new ShopGoodsSku();
+            sk.setSkuId(s.getKwaiSkuId() != null ? s.getKwaiSkuId().toString() : null);
+            sk.setOuterSkuId(s.getRelSkuId() != null ? s.getRelSkuId().toString() : null);
+            sk.setPrice(s.getSkuSalePrice()); sk.setStockNum(s.getSkuStock());
+            sk.setSkuName(s.getSkuNick()); sk.setImg(s.getImageUrl());
             skuList.add(sk);
         }
         sg.setSkuList(skuList); return sg;
