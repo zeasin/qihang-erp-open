@@ -5,6 +5,7 @@ import cn.qihangerp.model.bo.GoodsSkuNewAddBo;
 import cn.qihangerp.model.query.GoodsQuery;
 import cn.qihangerp.model.query.GoodsSkuQuery;
 import cn.qihangerp.model.vo.GoodsSpecListVo;
+import cn.qihangerp.mapper.OGoodsInventoryMapper;
 import cn.qihangerp.mapper.OGoodsMapper;
 import cn.qihangerp.mapper.OGoodsSkuAttrMapper;
 import cn.qihangerp.mapper.OGoodsSkuMapper;
@@ -44,6 +45,7 @@ public class OGoodsServiceImpl extends ServiceImpl<OGoodsMapper, OGoods>
     private final OGoodsMapper goodsMapper;
     private final OGoodsSkuMapper skuMapper;
     private final OGoodsSkuAttrMapper skuAttrMapper;
+    private final OGoodsInventoryMapper inventoryMapper;
 
     @Override
     public PageResult<OGoodsSku> querySkuPageList(GoodsSkuQuery bo, PageQuery pageQuery) {
@@ -407,9 +409,9 @@ public class OGoodsServiceImpl extends ServiceImpl<OGoodsMapper, OGoods>
             spec.setWidth(skuBo.getWidth()==null?0.0:skuBo.getWidth().doubleValue());
 
             skuMapper.insert(spec);
-//            if(bo.getMerchantId()==0) {
-//                // 添加商品库存表
-//                OGoodsInventory inventory = new OGoodsInventory();
+//            if(goods.getMerchantId()==0) {
+//                // 添加商品库存表（主系统库存）
+//                cn.qihangerp.model.entity.OGoodsInventory inventory = new cn.qihangerp.model.entity.OGoodsInventory();
 //                inventory.setMerchantId(goods.getMerchantId());
 //                inventory.setSkuId(spec.getId());
 //                inventory.setGoodsId(goods.getId());
@@ -419,6 +421,10 @@ public class OGoodsServiceImpl extends ServiceImpl<OGoodsMapper, OGoods>
 //                inventory.setGoodsImg(spec.getColorImage());
 //                inventory.setSkuName(spec.getSkuName());
 //                inventory.setQuantity(0);
+//                inventory.setLockedQuantity(0);
+//                inventory.setAvailableQuantity(0);
+//                inventory.setWarehouseId(0L);
+//                inventory.setStockStatus(1);
 //                inventory.setIsDelete(0);
 //                inventory.setCreateTime(LocalDateTime.now());
 //                inventory.setCreateBy("添加商品");
@@ -522,8 +528,8 @@ public class OGoodsServiceImpl extends ServiceImpl<OGoodsMapper, OGoods>
             spec.setWeight3(skuBo.getWeight3()==null?0.0:skuBo.getWeight3());
             skuMapper.insert(spec);
 //            if(goods.getMerchantId()==0) {
-//                // 添加商品库存表
-//                OGoodsInventory inventory = new OGoodsInventory();
+//                // 添加商品库存表（主系统库存）
+//                cn.qihangerp.model.entity.OGoodsInventory inventory = new cn.qihangerp.model.entity.OGoodsInventory();
 //                inventory.setMerchantId(goods.getMerchantId());
 //                inventory.setSkuId(spec.getId());
 //                inventory.setGoodsId(goods.getId());
@@ -533,6 +539,10 @@ public class OGoodsServiceImpl extends ServiceImpl<OGoodsMapper, OGoods>
 //                inventory.setGoodsImg(spec.getColorImage());
 //                inventory.setSkuName(spec.getSkuName());
 //                inventory.setQuantity(0);
+//                inventory.setLockedQuantity(0);
+//                inventory.setAvailableQuantity(0);
+//                inventory.setWarehouseId(0L);
+//                inventory.setStockStatus(1);
 //                inventory.setIsDelete(0);
 //                inventory.setCreateTime(LocalDateTime.now());
 //                inventory.setCreateBy("添加商品");

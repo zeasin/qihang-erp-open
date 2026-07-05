@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="cn.qihangerp.mapper.OGoodsInventoryBatchMapper">
+
+    <resultMap id="BaseResultMap" type="cn.qihangerp.model.entity.OGoodsInventoryBatch">
+        <id property="id" column="id" jdbcType="BIGINT"/>
+        <result property="inventoryId" column="inventory_id" jdbcType="BIGINT"/>
+        <result property="batchNum" column="batch_num" jdbcType="VARCHAR"/>
+        <result property="originQty" column="origin_qty" jdbcType="BIGINT"/>
+        <result property="currentQty" column="current_qty" jdbcType="BIGINT"/>
+        <result property="purPrice" column="pur_price" jdbcType="DECIMAL"/>
+        <result property="purId" column="pur_id" jdbcType="BIGINT"/>
+        <result property="purItemId" column="pur_item_id" jdbcType="BIGINT"/>
+        <result property="remark" column="remark" jdbcType="VARCHAR"/>
+        <result property="skuId" column="sku_id" jdbcType="BIGINT"/>
+        <result property="goodsId" column="goods_id" jdbcType="BIGINT"/>
+        <result property="skuCode" column="sku_code" jdbcType="VARCHAR"/>
+        <result property="warehouseId" column="warehouse_id" jdbcType="BIGINT"/>
+        <result property="positionId" column="position_id" jdbcType="BIGINT"/>
+        <result property="positionNum" column="position_num" jdbcType="VARCHAR"/>
+        <result property="merchantId" column="merchant_id" jdbcType="BIGINT"/>
+        <result property="shopId" column="shop_id" jdbcType="BIGINT"/>
+        <result property="barcode" column="barcode" jdbcType="VARCHAR"/>
+        <result property="stockStatus" column="stock_status" jdbcType="TINYINT"/>
+        <result property="inventoryMode" column="inventory_mode" jdbcType="TINYINT"/>
+        <result property="actualGoldWeight" column="actual_gold_weight" jdbcType="DECIMAL"/>
+        <result property="actualSilverWeight" column="actual_silver_weight" jdbcType="DECIMAL"/>
+        <result property="laborCost" column="labor_cost" jdbcType="DECIMAL"/>
+        <result property="certificateNo" column="certificate_no" jdbcType="VARCHAR"/>
+        <result property="createTime" column="create_time" jdbcType="TIMESTAMP"/>
+        <result property="createBy" column="create_by" jdbcType="VARCHAR"/>
+        <result property="updateTime" column="update_time" jdbcType="TIMESTAMP"/>
+        <result property="updateBy" column="update_by" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <sql id="Base_Column_List">
+        id, inventory_id, batch_num,
+        origin_qty, current_qty, pur_price, pur_id, pur_item_id,
+        remark, sku_id, goods_id, sku_code,
+        warehouse_id, position_id, position_num,
+        merchant_id, shop_id,
+        barcode, stock_status, inventory_mode,
+        actual_gold_weight, actual_silver_weight, labor_cost, certificate_no,
+        create_time, create_by, update_time, update_by
+    </sql>
+
+</mapper>
