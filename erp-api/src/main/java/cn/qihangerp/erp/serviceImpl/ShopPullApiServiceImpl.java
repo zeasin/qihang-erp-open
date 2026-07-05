@@ -27,6 +27,12 @@ import cn.qihangerp.open.dou.DouGoodsApiHelper;
 import cn.qihangerp.open.dou.model.GoodsListResultVo;
 import cn.qihangerp.open.dou.model.Goods;
 import cn.qihangerp.open.dou.model.GoodsSku;
+import cn.qihangerp.open.wei.WeiOrderApiHelper;
+import cn.qihangerp.open.wei.WeiRefundApiHelper;
+import cn.qihangerp.open.wei.WeiGoodsApiHelper;
+import cn.qihangerp.open.wei.model.Order;
+import cn.qihangerp.open.wei.model.AfterSaleOrder;
+import cn.qihangerp.open.wei.model.Product;
 import cn.qihangerp.service.*;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -728,6 +734,187 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
                 + (s.getSpecDetailName2() != null ? ";" + s.getSpecDetailName2() : "")
                 + (s.getSpecDetailName3() != null ? ";" + s.getSpecDetailName3() : ""));
             sk.setStatus(s.isSkuStatus() ? 1 : 0);
+            skuList.add(sk);
+        }
+        sg.setSkuList(skuList); return sg;
+    }
+
+
+    // ======================== WEI 微信小店 ========================
+
+    private ResultVo<String> pullWeiOrder(OShop shop, String startTime, String endTime, long begin) {
+        var p = chk(shop, 500); if (p == null) return err(shop, "ORDER", "校验失败", begin);
+        LocalDateTime s = LocalDateTime.parse(startTime + " 00:00:01", DT);
+        LocalDateTime e = StringUtils.hasText(endTime) ? LocalDateTime.parse(endTime + " 23:59:59", DT) : LocalDateTime.parse(startTime + " 23:59:59", DT);
+        String pp = "{st:" + s.format(DT) + "}";
+        try {
+            var r = WeiOrderApiHelper.pullOrderList(s, e, p.getAccessToken(), 10, 0);
+            if (r.getCode() != 0) return errLog(shop, "ORDER", r.getMsg(), pp, begin);
+            int ins = 0, upd = 0, fail = 0;
+            if (r.getList() != null) for (var t : r.getList()) {
+                try { var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), weiOrder(t));
+                    if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+                    if (sr.getCode() == 0) ins++; else upd++;
+                } catch (Exception ex) { log.error("WEI订单保存失败", ex); fail++; }
+            }
+            logMsg(shop, "ORDER", pp, "{ins:" + ins + ",upd:" + upd + ",fail:" + fail + "}", begin);
+            return ResultVo.success("成功，新增" + ins + "，更新" + upd + "，失败" + fail);
+        } catch (Exception ex) { return err(shop, "ORDER", "WEI:" + ex.getMessage(), begin); }
+    }
+    private ShopOrder weiOrder(Order t) {
+        ShopOrder o = new ShopOrder(); o.setPlatformType("WEI");
+        o.setOrderId(t.getOrder_id()); o.setOrderTime(t.getCreate_time()); o.setUpdateTime(t.getUpdate_time());
+        o.setOrderStatus(weiStatus(t.getStatus()));
+        var d = t.getOrder_detail();
+        if (d != null) {
+            if (d.getPrice_info() != null) {
+                JSONObject price = d.getPrice_info();
+                o.setGoodsAmount(price.getIntValue("total_product_price"));
+                o.setOrderAmount(price.getIntValue("order_original_price"));
+                o.setFreight(price.getIntValue("freight"));
+                o.setDiscountAmount(price.getIntValue("discounted_price"));
+                o.setPaymentAmount(price.getIntValue("order_payment"));
+            }
+            if (d.getPay_info() != null) {
+                JSONObject pay = d.getPay_info();
+                o.setPayTime(ts(pay.getString("pay_time")));
+                o.setPaymentMethod(pay.getString("pay_method"));
+            }
+            if (d.getDelivery_info() != null) {
+                var addr = d.getDelivery_info().getAddress_info();
+                if (addr != null) { o.setProvince(addr.getProvince_name()); o.setCity(addr.getCity_name()); o.setCounty(addr.getCounty_name()); }
+                o.setReceiverName(d.getDelivery_info().getAddress_info() != null ? d.getDelivery_info().getAddress_info().getUser_name() : null);
+                o.setReceiverPhone(d.getDelivery_info().getAddress_info() != null ? d.getDelivery_info().getAddress_info().getTel_number() : null);
+                o.setAddress(d.getDelivery_info().getAddress_info() != null ? d.getDelivery_info().getAddress_info().getDetail_info() : null);
+            }
+            List<ShopOrderItem> items = new ArrayList<>();
+            if (d.getProduct_infos() != null) for (var p : d.getProduct_infos()) {
+                ShopOrderItem i = new ShopOrderItem(); i.setOrderId(t.getOrder_id());
+                i.setProductId(p.getProduct_id()); i.setSkuId(p.getSku_id());
+                i.setTitle(p.getTitle()); i.setImg(p.getThumb_img()); i.setQuantity(p.getSku_cnt());
+                i.setSalePrice(p.getSale_price() != null ? p.getSale_price() : 0);
+                i.setMarketPrice(p.getMarket_price() != null ? p.getMarket_price() : 0);
+                i.setRealPrice(p.getReal_price() != null ? p.getReal_price() : 0);
+                i.setOuterProductId(p.getOut_product_id()); i.setOuterSkuId(p.getOut_sku_id());
+                i.setOrderTime(o.getOrderTime()); items.add(i);
+            }
+            o.setItems(items);
+        }
+        o.setOrderType(0); o.setOrderMode(0); o.setErpShipStatus(0); o.setConfirmStatus(0);
+        return o;
+    }
+    private Integer weiStatus(Integer s) {
+        if (s == null) return 21;
+        return switch (s) { case 10 -> 21; case 20, 21 -> 1; case 22 -> 101; case 30 -> 2; case 100 -> 3; case 200 -> 11; case 250 -> 12; default -> s; };
+    }
+    private ResultVo<String> pullWeiOrderDetail(OShop shop, String orderId, long begin) {
+        var p = chk(shop, 500); if (p == null) return err(shop, "ORDER", "校验失败", begin);
+        try {
+            var r = WeiOrderApiHelper.pullOrderDetail(Long.parseLong(orderId), p.getAccessToken());
+            if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "ORDER", r.getMsg(), "{orderId:" + orderId + "}", begin);
+            var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), weiOrder(r.getData()));
+            if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+            logMsg(shop, "ORDER", "{orderId:" + orderId + "}", "{}", begin);
+            return ResultVo.success("订单[" + orderId + "]同步完成");
+        } catch (Exception ex) { return err(shop, "ORDER", "WEI detail:" + ex.getMessage(), begin); }
+    }
+    private ResultVo<String> pullWeiRefund(OShop shop, long begin) {
+        var p = chk(shop, 500); if (p == null) return err(shop, "REFUND", "校验失败", begin);
+        var lt = pullLasttimeService.getLasttimeByShop(shop.getId(), "REFUND");
+        LocalDateTime st = lt == null ? LocalDateTime.now().minusDays(1) : lt.getLasttime().minusMinutes(5);
+        LocalDateTime et = LocalDateTime.now();
+        if (st.plusHours(24).isBefore(et)) et = st.plusHours(24); // WEI限制24h
+        String pp = "{st:" + st.format(DT) + ",et:" + et.format(DT) + "}";
+        try {
+            var r = WeiRefundApiHelper.pullRefundList(st, et, p.getAccessToken());
+            if (r.getCode() != 0) return errLog(shop, "REFUND", r.getMsg(), pp, begin);
+            int ins = 0, fail = 0;
+            if (r.getList() != null) for (var rf : r.getList()) {
+                try { var rr = shopRefundService.saveRefund(shop.getId(), weiRefund(rf));
+                    if (rr.getData() != null) { oRefundService.shopRefundMessage(rr.getData()); ins++; } else fail++;
+                } catch (Exception ex) { log.error("WEI退款保存失败", ex); fail++; }
+            }
+            if (fail == 0) upsertLt(shop.getId(), "REFUND", et, lt);
+            logMsg(shop, "REFUND", pp, "{ins:" + ins + ",fail:" + fail + "}", begin);
+            return ResultVo.success("成功，新增" + ins + "条");
+        } catch (Exception ex) { return err(shop, "REFUND", "WEI:" + ex.getMessage(), begin); }
+    }
+    private ResultVo<String> pullWeiRefundDetail(OShop shop, String afterId, long begin) {
+        var p = chk(shop, 500); if (p == null) return err(shop, "REFUND", "校验失败", begin);
+        try {
+            var r = WeiRefundApiHelper.pullRefundDetail(Long.parseLong(afterId), p.getAccessToken());
+            if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "REFUND", r.getMsg(), "{afterId:" + afterId + "}", begin);
+            var rr = shopRefundService.saveRefund(shop.getId(), weiRefund(r.getData()));
+            if (rr.getData() != null) oRefundService.shopRefundMessage(rr.getData());
+            logMsg(shop, "REFUND", "{afterId:" + afterId + "}", "{}", begin);
+            return ResultVo.success("售后[" + afterId + "]同步完成");
+        } catch (Exception ex) { return err(shop, "REFUND", "WEI detail:" + ex.getMessage(), begin); }
+    }
+    private ShopRefund weiRefund(AfterSaleOrder rf) {
+        ShopRefund r = new ShopRefund(); r.setPlatformType("WEI");
+        r.setAfterId(rf.getAfter_sale_order_id());
+        r.setOrderId(rf.getOrder_id());
+        r.setType("RETURN".equals(rf.getType()) ? 10 : 11);
+        r.setStatus(weiRefundStatus(rf.getStatus()));
+        if (rf.getProduct_info() != null) {
+            r.setProductId(rf.getProduct_info().getProduct_id());
+            r.setSkuId(rf.getProduct_info().getSku_id());
+            r.setCount(rf.getProduct_info().getCount());
+        }
+        if (rf.getRefund_info() != null) {
+            r.setRefundAmount(rf.getRefund_info().getIntValue("amount"));
+            r.setReason(rf.getRefund_info().getString("reason_text"));
+        }
+        if (rf.getReturn_info() != null) {
+            r.setReturnWaybillId(rf.getReturn_info().getWaybill_id());
+            r.setReturnDeliveryId(rf.getReturn_info().getDelivery_id());
+            r.setReturnDeliveryName(rf.getReturn_info().getDelivery_name());
+        }
+        r.setReason(rf.getReason_text());
+        r.setCreateTime(rf.getCreate_time() != null ? rf.getCreate_time().longValue() : null);
+        r.setUpdateTime(rf.getUpdate_time() != null ? rf.getUpdate_time().longValue() : null);
+        return r;
+    }
+    private Integer weiRefundStatus(String s) {
+        if (s == null) return 1;
+        return switch (s) {
+            case "WAIT_SELLER_ACCEPT" -> 2; case "SELLER_ACCEPT_REFUND", "WAIT_SELLER_RECEIVE" -> 3;
+            case "REFUND_SUCCESS" -> 4; case "REFUND_CLOSE", "SELLER_REFUSE_REFUND" -> 1;
+            default -> 1;
+        };
+    }
+    private ResultVo<String> pullWeiGoods(OShop shop, long begin) {
+        var p = chk(shop, 500); if (p == null) return err(shop, "GOODS", "校验失败", begin);
+        try {
+            var r = WeiGoodsApiHelper.pullGoodsList(p.getAccessToken());
+            if (r.getCode() != 0) return errLog(shop, "GOODS", r.getMsg(), "{}", begin);
+            int success = 0;
+            if (r.getList() != null) for (var g : r.getList()) {
+                try { shopGoodsService.savePddGoods(weiGoods(g), shop.getId()); success++; } catch (Exception ex) { log.error("WEI商品保存失败", ex); }
+            }
+            logMsg(shop, "GOODS", "{}", "{success:" + success + "}", begin);
+            return ResultVo.success("拉取成功" + success + "件");
+        } catch (Exception ex) { return err(shop, "GOODS", "WEI:" + ex.getMessage(), begin); }
+    }
+    private ShopGoods weiGoods(Product g) {
+        ShopGoods sg = new ShopGoods(); if (g == null) return sg;
+        sg.setProductId(g.getProduct_id()); sg.setOuterProductId(g.getOut_product_id());
+        sg.setTitle(g.getTitle()); sg.setSubTitle(g.getSub_title());
+        sg.setMinPrice(g.getMin_price()); sg.setStatus(g.getStatus());
+        sg.setSpuCode(g.getSpu_code());
+        if (g.getHead_imgs() != null && !g.getHead_imgs().isEmpty()) {
+            sg.setImg(g.getHead_imgs().getString(0));
+            sg.setImgs(g.getHead_imgs().toJSONString());
+        }
+        List<ShopGoodsSku> skuList = new ArrayList<>();
+        if (g.getSkus() != null) for (var s : g.getSkus()) {
+            ShopGoodsSku sk = new ShopGoodsSku(); sk.setSkuId(s.getSku_id());
+            sk.setOuterSkuId(s.getOut_sku_id()); sk.setImg(s.getThumb_img());
+            sk.setPrice(s.getSale_price()); sk.setStockNum(s.getStock_num());
+            sk.setStatus(s.getStatus()); sk.setSkuCode(s.getSku_code());
+            if (s.getSku_attrs() != null && !s.getSku_attrs().isEmpty()) {
+                sk.setSkuName(s.getSku_attrs().toJSONString());
+            }
             skuList.add(sk);
         }
         sg.setSkuList(skuList); return sg;
