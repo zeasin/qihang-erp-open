@@ -37,6 +37,13 @@ import cn.qihangerp.open.kwai.KwaiOrderApiHelper;
 import cn.qihangerp.open.kwai.KwaiGoodsApiHelper;
 import cn.qihangerp.open.kwai.KwaiRefundApiHelper;
 import cn.qihangerp.open.kwai.model.KwaiGoodsItem;
+import cn.qihangerp.open.xhs.xhsOrderApiHelper;
+import cn.qihangerp.open.xhs.xhsGoodsApiHelper;
+import cn.qihangerp.open.xhs.xhsRefundApiHelper;
+import cn.qihangerp.open.xhs.response.OrderResponse;
+import cn.qihangerp.open.xhs.response.AfterSaleInfoResponse;
+import cn.qihangerp.open.xhs.response.GoodsItemInfo;
+import cn.qihangerp.open.xhs.response.GoodsItemSku;
 import cn.qihangerp.service.*;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -1070,6 +1077,165 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             sk.setOuterSkuId(s.getRelSkuId() != null ? s.getRelSkuId().toString() : null);
             sk.setPrice(s.getSkuSalePrice()); sk.setStockNum(s.getSkuStock());
             sk.setSkuName(s.getSkuNick()); sk.setImg(s.getImageUrl());
+            skuList.add(sk);
+        }
+        sg.setSkuList(skuList); return sg;
+    }
+
+
+    // ======================== XHS 小红书 ========================
+
+    private ResultVo<String> pullXhsOrder(OShop shop, String startTime, String endTime, long begin) {
+        var p = chk(shop, 700); if (p == null) return err(shop, "ORDER", "校验失败", begin);
+        LocalDateTime s = LocalDateTime.parse(startTime + " 00:00:01", DT);
+        LocalDateTime e = StringUtils.hasText(endTime) ? LocalDateTime.parse(endTime + " 23:59:59", DT) : LocalDateTime.parse(startTime + " 23:59:59", DT);
+        String pp = "{st:" + s.format(DT) + "}";
+        try {
+            var r = xhsOrderApiHelper.pullOrderListVo(p.getAppKey(), p.getAppSecret(), p.getAccessToken(), s, e);
+            if (r.getCode() != 0) return errLog(shop, "ORDER", r.getMsg(), pp, begin);
+            int ins = 0, upd = 0, fail = 0;
+            if (r.getList() != null) for (var t : r.getList()) {
+                try { var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), xhsOrder(t));
+                    if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+                    if (sr.getCode() == 0) ins++; else upd++;
+                } catch (Exception ex) { log.error("XHS订单保存失败", ex); fail++; }
+            }
+            logMsg(shop, "ORDER", pp, "{ins:" + ins + ",upd:" + upd + ",fail:" + fail + "}", begin);
+            return ResultVo.success("成功，新增" + ins + "，更新" + upd + "，失败" + fail);
+        } catch (Exception ex) { return err(shop, "ORDER", "XHS:" + ex.getMessage(), begin); }
+    }
+    private ShopOrder xhsOrder(OrderResponse t) {
+        ShopOrder o = new ShopOrder(); o.setPlatformType("XHS");
+        o.setOrderId(t.getOrderId());
+        o.setOrderTime(t.getCreatedTime() != null ? t.getCreatedTime() / 1000 : null);
+        o.setUpdateTime(t.getUpdateTime() != null ? t.getUpdateTime() / 1000 : null);
+        o.setOrderTimeText(t.getCreatedTime() != null ? String.valueOf(t.getCreatedTime()) : null);
+        o.setOrderStatus(t.getOrderStatus());
+        o.setRefundStatus(t.getOrderAfterSalesStatus());
+        // 金额（分）
+        o.setGoodsAmount(t.getTotalPayAmount() != null ? t.getTotalPayAmount() : 0);
+        o.setOrderAmount(t.getTotalPayAmount() != null ? t.getTotalPayAmount() : 0);
+        o.setPaymentAmount(t.getTotalPayAmount() != null ? t.getTotalPayAmount() : 0);
+        o.setFreight(t.getTotalShippingFree() != null ? t.getTotalShippingFree() : 0);
+        o.setDiscountAmount(t.getTotalMerchantDiscount() != null ? t.getTotalMerchantDiscount() : 0);
+        o.setPlatformDiscount(t.getTotalRedDiscount() != null ? t.getTotalRedDiscount() : 0);
+        o.setPayTime(t.getPaidTime() != null ? t.getPaidTime() / 1000 : null);
+        o.setPaymentMethod(t.getPaymentType() != null ? String.valueOf(t.getPaymentType()) : null);
+        o.setBuyerMemo(t.getCustomerRemark());
+        o.setRemark(t.getSellerRemark());
+        o.setFinishTime(t.getFinishTime() != null ? t.getFinishTime() / 1000 : null);
+        // 地址
+        o.setProvince(t.getReceiverProvinceName()); o.setCity(t.getReceiverCityName());
+        o.setCounty(t.getReceiverDistrictName());
+        o.setAddress(t.getAddress()); o.setReceiverName(t.getReceiver()); o.setReceiverPhone(t.getPhone());
+        // 子订单
+        List<ShopOrderItem> items = new ArrayList<>();
+        if (t.getItemList() != null) for (var it : t.getItemList()) {
+            ShopOrderItem i = new ShopOrderItem(); i.setOrderId(t.getOrderId());
+            i.setProductId(it.getItemId()); i.setSkuId(it.getSkuId());
+            i.setTitle(it.getItemName() != null ? it.getItemName() : it.getSkuName());
+            i.setSkuName(it.getSkuSpec()); i.setImg(it.getSkuImage());
+            i.setQuantity(it.getSkuQuantity() != null ? it.getSkuQuantity() : 0);
+            i.setSalePrice(it.getTotalPaidAmount() != null && it.getSkuQuantity() != null && it.getSkuQuantity() > 0
+                ? it.getTotalPaidAmount() / it.getSkuQuantity() : 0);
+            i.setOuterSkuId(it.getErpcode());
+            i.setOrderTime(o.getOrderTime()); items.add(i);
+        }
+        o.setItems(items);
+        o.setOrderType(0); o.setOrderMode(0); o.setErpShipStatus(0); o.setConfirmStatus(0);
+        return o;
+    }
+    private ResultVo<String> pullXhsOrderDetail(OShop shop, String orderId, long begin) {
+        var p = chk(shop, 700); if (p == null) return err(shop, "ORDER", "校验失败", begin);
+        try {
+            var r = xhsOrderApiHelper.getOrderDetailVo(p.getAppKey(), p.getAppSecret(), p.getAccessToken(), orderId);
+            if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "ORDER", r.getMsg(), "{orderId:" + orderId + "}", begin);
+            var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), xhsOrder(r.getData()));
+            if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+            logMsg(shop, "ORDER", "{orderId:" + orderId + "}", "{}", begin);
+            return ResultVo.success("订单[" + orderId + "]同步完成");
+        } catch (Exception ex) { return err(shop, "ORDER", "XHS detail:" + ex.getMessage(), begin); }
+    }
+    private ResultVo<String> pullXhsRefund(OShop shop, long begin) {
+        var p = chk(shop, 700); if (p == null) return err(shop, "REFUND", "校验失败", begin);
+        var lt = pullLasttimeService.getLasttimeByShop(shop.getId(), "REFUND");
+        LocalDateTime st = lt == null ? LocalDateTime.now().minusDays(1) : lt.getLasttime().minusMinutes(5);
+        LocalDateTime et = LocalDateTime.now();
+        String pp = "{st:" + st.format(DT) + "}";
+        try {
+            var r = xhsRefundApiHelper.pullRefundListVo(p.getAppKey(), p.getAppSecret(), p.getAccessToken(), st, et);
+            if (r.getCode() != 0) return errLog(shop, "REFUND", r.getMsg(), pp, begin);
+            int ins = 0, fail = 0;
+            if (r.getList() != null) for (var rf : r.getList()) {
+                try { var rr = shopRefundService.saveRefund(shop.getId(), xhsRefund(rf));
+                    if (rr.getData() != null) { oRefundService.shopRefundMessage(rr.getData()); ins++; } else fail++;
+                } catch (Exception ex) { log.error("XHS退款保存失败", ex); fail++; }
+            }
+            if (fail == 0) upsertLt(shop.getId(), "REFUND", et, lt);
+            logMsg(shop, "REFUND", pp, "{ins:" + ins + ",fail:" + fail + "}", begin);
+            return ResultVo.success("成功，新增" + ins + "条");
+        } catch (Exception ex) { return err(shop, "REFUND", "XHS:" + ex.getMessage(), begin); }
+    }
+    private ResultVo<String> pullXhsRefundDetail(OShop shop, String afterId, long begin) {
+        var p = chk(shop, 700); if (p == null) return err(shop, "REFUND", "校验失败", begin);
+        try {
+            var r = xhsRefundApiHelper.getRefundDetailVo(p.getAppKey(), p.getAppSecret(), p.getAccessToken(), afterId);
+            if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "REFUND", r.getMsg(), "{afterId:" + afterId + "}", begin);
+            var rr = shopRefundService.saveRefund(shop.getId(), xhsRefund(r.getData()));
+            if (rr.getData() != null) oRefundService.shopRefundMessage(rr.getData());
+            logMsg(shop, "REFUND", "{afterId:" + afterId + "}", "{}", begin);
+            return ResultVo.success("售后[" + afterId + "]同步完成");
+        } catch (Exception ex) { return err(shop, "REFUND", "XHS detail:" + ex.getMessage(), begin); }
+    }
+    private ShopRefund xhsRefund(AfterSaleInfoResponse rf) {
+        ShopRefund r = new ShopRefund(); r.setPlatformType("XHS");
+        r.setAfterId(rf.getReturnsId());
+        r.setType(rf.getReturnType() != null ? (rf.getReturnType() == 5 || rf.getReturnType() == 4 ? 11 : 10) : 11);
+        r.setStatus(rf.getStatus());
+        r.setOrderId(rf.getOrderId());
+        r.setCount(rf.getSkus() != null && !rf.getSkus().isEmpty() ? rf.getSkus().get(0).getAppliedCount() : 0);
+        // refundAmountYuan是元，转分
+        r.setRefundAmount((int) Math.round(rf.getRefundAmountYuan() * 100));
+        r.setCreateTime(rf.getApplyTime() != null ? rf.getApplyTime() : null);
+        r.setUpdateTime(rf.getUpdatedAt() != null ? rf.getUpdatedAt() : null);
+        r.setReason(rf.getDesc());
+        if (rf.getSkus() != null && !rf.getSkus().isEmpty()) {
+            var sku = rf.getSkus().get(0);
+            r.setSkuId(sku.getSkuId());
+            r.setGoodsName(sku.getSkuName());
+            r.setGoodsImage(sku.getImage());
+            r.setGoodsPrice(sku.getPrice() != null ? (int) Math.round(sku.getPrice() * 100) : 0);
+        }
+        return r;
+    }
+    private ResultVo<String> pullXhsGoods(OShop shop, long begin) {
+        var p = chk(shop, 700); if (p == null) return err(shop, "GOODS", "校验失败", begin);
+        try {
+            var r = xhsGoodsApiHelper.pullGoodsItemListVo(p.getAppKey(), p.getAppSecret(), p.getAccessToken());
+            if (r.getCode() != 0) return errLog(shop, "GOODS", r.getMsg(), "{}", begin);
+            int success = 0;
+            if (r.getList() != null) for (var g : r.getList()) {
+                try { shopGoodsService.savePddGoods(xhsGoods(g), shop.getId()); success++; } catch (Exception ex) { log.error("XHS商品保存失败", ex); }
+            }
+            logMsg(shop, "GOODS", "{}", "{success:" + success + "}", begin);
+            return ResultVo.success("拉取成功" + success + "件");
+        } catch (Exception ex) { return err(shop, "GOODS", "XHS:" + ex.getMessage(), begin); }
+    }
+    private ShopGoods xhsGoods(GoodsItemInfo g) {
+        ShopGoods sg = new ShopGoods(); if (g == null) return sg;
+        sg.setProductId(g.getId()); sg.setTitle(g.getName());
+        sg.setOuterProductId(g.getArticleNo());
+        sg.setSpuCode(g.getArticleNo());
+        if (g.getImages() != null && g.getImages().length > 0) {
+            sg.setImg(g.getImages()[0]);
+            sg.setImgs(String.join(",", g.getImages()));
+        }
+        List<ShopGoodsSku> skuList = new ArrayList<>();
+        if (g.getSkus() != null) for (var s : g.getSkus()) {
+            ShopGoodsSku sk = new ShopGoodsSku(); sk.setSkuId(s.getId());
+            sk.setOuterSkuId(s.getErpCode()); sk.setPrice(s.getPrice());
+            sk.setStockNum(s.getStock()); sk.setSkuName(s.getName());
+            sk.setImg(s.getSpecImage()); sk.setSkuCode(s.getScSkucode());
             skuList.add(sk);
         }
         sg.setSkuList(skuList); return sg;
