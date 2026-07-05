@@ -1,6 +1,7 @@
 package cn.qihangerp.erp.controller.oms;
 
 import cn.qihangerp.common.*;
+import cn.qihangerp.erp.service.ShopPullApiService;
 import cn.qihangerp.enums.EnumShopType;
 import cn.qihangerp.model.bo.LinkErpGoodsSkuBo;
 import cn.qihangerp.model.entity.OGoodsSku;
@@ -8,10 +9,7 @@ import cn.qihangerp.model.entity.OShop;
 import cn.qihangerp.model.entity.ShopGoods;
 import cn.qihangerp.model.entity.ShopGoodsSku;
 import cn.qihangerp.model.query.ShopGoodsSkuBo;
-import cn.qihangerp.model.request.ShopGoodsAddRequest;
-import cn.qihangerp.model.request.ShopGoodsSkuAddRequest;
-import cn.qihangerp.model.request.ShopGoodsSkuInsertRequest;
-import cn.qihangerp.model.request.ShopGoodsSkuUpdateRequest;
+import cn.qihangerp.model.request.*;
 import cn.qihangerp.security.common.BaseController;
 import cn.qihangerp.service.*;
 import lombok.AllArgsConstructor;
@@ -33,6 +31,7 @@ public class ShopGoodsController extends BaseController {
     private final OGoodsSkuService oGoodsSkuService;
     private final OShopService shopService;
     private final ErpWarehouseGoodsStockService goodsStockService;
+    private final ShopPullApiService shopPullApiService;
 
     /**
      * 店铺商品list
@@ -211,5 +210,18 @@ public class ShopGoodsController extends BaseController {
         boolean result = skuService.removeById(id);
         if(result) return AjaxResult.success();
         else return AjaxResult.error("系统异常");
+    }
+
+    /**
+     * 拉取店铺商品列表（含SKU，根据 shopType 路由到对应平台 SDK）。
+     * 前端：{@code /api/oms-api/shop/goods/pull_list}，参数 {shopId, pullType}
+     */
+    @PostMapping("/pull_list")
+    public AjaxResult pullList(@RequestBody GoodsPullRequest params) {
+        ResultVo<String> result = shopPullApiService.pullGoods(params.getShopId(), params.getPullType());
+        if (result.getCode() == 0) {
+            return AjaxResult.success(result.getMsg());
+        }
+        return AjaxResult.error(result.getCode(), result.getMsg());
     }
 }
