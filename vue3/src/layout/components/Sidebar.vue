@@ -10,6 +10,7 @@
         text-color="rgba(0,0,0,.70)"
         active-text-color="#409eff"
         :collapse-transition="false"
+        :unique-opened="true"
         mode="vertical"
       >
         <sidebar-item
