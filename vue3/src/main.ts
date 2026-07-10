@@ -10,10 +10,17 @@ import App from './App.vue'
 import router from './router'
 import { setupStore } from './store'
 import './permission'
+import { setupPermissionDirective } from '@/directive/hasPermi'
+import { setupRoleDirective } from '@/directive/hasRole'
+import DictTag from '@/components/DictTag/index.vue'
 
 const app = createApp(App)
 
 setupStore(app)
+
+setupPermissionDirective(app)
+setupRoleDirective(app)
+app.component('DictTag', DictTag)
 
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
   app.component(key, component)

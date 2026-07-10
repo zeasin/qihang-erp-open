@@ -19,3 +19,27 @@ body,
 .app-container {
   padding: 20px;
 }
+
+.link-type,
+.link-type:focus {
+  color: #337ab7;
+  cursor: pointer;
+}
+.link-type:hover {
+  color: rgb(32, 160, 255);
+}
+
+.mb8 {
+  margin-bottom: 8px;
+}
+
+.tree-border {
+  margin-top: 5px;
+  border: 1px solid #e5e6e7;
+  background: #fff;
+  border-radius: 4px;
+}
+
+.head-container {
+  padding-bottom: 10px;
+}
