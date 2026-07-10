@@ -1,6 +1,11 @@
 @use 'sidebar';
 @use 'transition';
 
+:root {
+  --el-input-height: 36px;
+  --el-select-input-height: 36px;
+}
+
 * {
   margin: 0;
   padding: 0;

@@ -17,7 +17,7 @@
               placeholder="账号/手机号"
             >
               <template #prefix>
-                <svg-icon icon-class="user" class="el-input__icon input-icon" />
+                <el-icon class="el-input__icon input-icon"><svg-icon icon-class="user" /></el-icon>
               </template>
             </el-input>
           </el-form-item>
@@ -30,7 +30,7 @@
               @keyup.enter="handleLogin"
             >
               <template #prefix>
-                <svg-icon icon-class="password" class="el-input__icon input-icon" />
+                <el-icon class="el-input__icon input-icon"><svg-icon icon-class="password" /></el-icon>
               </template>
             </el-input>
           </el-form-item>
@@ -43,7 +43,7 @@
               @keyup.enter="handleLogin"
             >
               <template #prefix>
-                <svg-icon icon-class="validCode" class="el-input__icon input-icon" />
+                <el-icon class="el-input__icon input-icon"><svg-icon icon-class="validCode" /></el-icon>
               </template>
             </el-input>
             <div class="login-code">

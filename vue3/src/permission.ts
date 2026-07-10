@@ -1,5 +1,4 @@
 import router from './router'
-import store from './store'
 import { useUserStore } from './store/modules/user'
 import { usePermissionStore } from './store/modules/permission'
 import { useSettingsStore } from './store/modules/settings'
