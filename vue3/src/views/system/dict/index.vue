@@ -8,7 +8,7 @@
         <el-input v-model="queryParams.dictType" placeholder="请输入字典类型" clearable style="width: 240px" @keyup.enter="handleQuery" />
       </el-form-item>
       <el-form-item label="状态" prop="status">
-        <el-select v-model="queryParams.status" placeholder="字典状态" clearable style="width: 240px">
+        <el-select v-model="queryParams.status" placeholder="字典状态" clearable style="width: 240px" @change="handleQuery">
           <el-option v-for="dictItem in dict.sys_normal_disable" :key="dictItem.value" :label="dictItem.label" :value="dictItem.value" />
         </el-select>
       </el-form-item>

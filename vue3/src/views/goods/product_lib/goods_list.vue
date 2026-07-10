@@ -26,7 +26,7 @@
         <Treeselect :options="categoryTree" placeholder="请选择商品分类" v-model="queryParams.categoryId" style="width: 230px;" />
       </el-form-item>
       <el-form-item label="状态" prop="status">
-        <el-select v-model="queryParams.status" filterable placeholder="状态">
+        <el-select v-model="queryParams.status" filterable placeholder="状态" @change="handleQuery">
           <el-option label="销售中" value="1"></el-option>
           <el-option label="已下架" value="2"></el-option>
         </el-select>

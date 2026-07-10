@@ -6,6 +6,25 @@
   --el-select-input-height: 36px;
 }
 
+.el-input--small .el-input__wrapper,
+.el-select--small .el-select__wrapper {
+  height: 32px;
+}
+.el-date-editor.el-input--small .el-input__wrapper {
+  height: 32px;
+}
+
+.el-form-item--small .el-form-item__label {
+  line-height: 32px;
+}
+.el-form-item--small .el-form-item__content {
+  line-height: 32px;
+}
+
+.el-form--inline .el-select {
+  min-width: 200px;
+}
+
 * {
   margin: 0;
   padding: 0;

@@ -5,7 +5,7 @@
         <el-input v-model="queryParams.skuCode" placeholder="请输入SKU编码" clearable @keyup.enter="handleQuery" />
       </el-form-item>
       <el-form-item label="状态" prop="status">
-        <el-select v-model="queryParams.status" filterable clearable placeholder="状态">
+        <el-select v-model="queryParams.status" filterable clearable placeholder="状态" @change="handleQuery">
           <el-option label="销售中" :value="1"></el-option>
           <el-option label="已下架" :value="2"></el-option>
         </el-select>
