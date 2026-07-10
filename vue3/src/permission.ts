@@ -28,8 +28,7 @@ router.beforeEach(async (to, _from, next) => {
       if (!userStore.roles.length) {
         try {
           await userStore.GetInfo()
-          const accessRoutes = await permissionStore.GenerateRoutes()
-          accessRoutes.forEach((route) => router.addRoute(route))
+          await permissionStore.GenerateRoutes()
           next({ ...to, replace: true })
         } catch (e) {
           await userStore.FedLogOut()

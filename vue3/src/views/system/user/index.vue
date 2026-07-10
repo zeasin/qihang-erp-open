@@ -1,35 +1,7 @@
 <template>
   <div class="app-container">
     <el-row :gutter="20">
-      <el-col :span="4" :xs="24">
-        <div class="head-container">
-          <el-input
-            v-model="deptName"
-            placeholder="请输入部门名称"
-            clearable
-            size="small"
-            style="margin-bottom: 20px"
-          >
-            <template #prefix>
-              <el-icon><Search /></el-icon>
-            </template>
-          </el-input>
-        </div>
-        <div class="head-container">
-          <el-tree
-            :data="deptOptions"
-            :props="defaultProps"
-            :expand-on-click-node="false"
-            :filter-node-method="filterNode"
-            ref="treeRef"
-            node-key="id"
-            default-expand-all
-            highlight-current
-            @node-click="handleNodeClick"
-          />
-        </div>
-      </el-col>
-      <el-col :span="20" :xs="24">
+      <el-col :span="24" :xs="24">
         <el-form :model="queryParams" ref="queryFormRef" size="small" :inline="true" v-show="showSearch" label-width="68px">
           <el-form-item label="用户名称" prop="userName">
             <el-input
@@ -132,7 +104,7 @@
           <el-table-column label="用户名称" align="center" key="userName" prop="userName" v-if="columns[1].visible" :show-overflow-tooltip="true" />
           <el-table-column label="用户昵称" align="center" key="nickName" prop="nickName" v-if="columns[2].visible" :show-overflow-tooltip="true" />
           <el-table-column label="备注" align="center" key="remark" prop="remark" width="120" />
-          <el-table-column label="状态" align="center" key="status" v-if="columns[5].visible">
+          <el-table-column label="状态" align="center" key="status" v-if="columns[4].visible">
             <template #default="scope">
               <el-switch
                 v-model="scope.row.status"
@@ -142,7 +114,7 @@
               />
             </template>
           </el-table-column>
-          <el-table-column label="创建时间" align="center" prop="createTime" v-if="columns[6].visible" width="160">
+          <el-table-column label="创建时间" align="center" prop="createTime" v-if="columns[5].visible" width="160">
             <template #default="scope">
               <span>{{ parseTime(scope.row.createTime) }}</span>
             </template>
@@ -204,17 +176,12 @@
             </el-form-item>
           </el-col>
           <el-col :span="12">
-            <el-form-item label="归属部门" prop="deptId">
-              <treeselect v-model="form.deptId" :options="deptOptions" :props="{ showCount: true }" placeholder="请选择归属部门" />
-            </el-form-item>
-          </el-col>
-        </el-row>
-        <el-row>
-          <el-col :span="12">
             <el-form-item label="手机号码" prop="phonenumber">
               <el-input v-model="form.phonenumber" placeholder="请输入手机号码" maxlength="11" />
             </el-form-item>
           </el-col>
+        </el-row>
+        <el-row>
           <el-col :span="12">
             <el-form-item label="邮箱" prop="email">
               <el-input v-model="form.email" placeholder="请输入邮箱" maxlength="50" />
@@ -292,16 +259,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, onMounted, reactive } from 'vue'
+import { ref, onMounted, reactive } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, Edit, Delete, ArrowDown, Key, CircleCheck } from '@element-plus/icons-vue'
-import { listUser, getUser, delUser, addUser, updateUser, resetUserPwd, changeUserStatus, deptTreeSelect } from '@/api/system/user'
+import { listUser, getUser, delUser, addUser, updateUser, resetUserPwd, changeUserStatus } from '@/api/system/user'
 import { validatePassword } from '@/utils/validate'
-import { parseTime, addDateRange } from '@/utils/zhijian'
+import { parseTime } from '@/utils/zhijian'
 import { useDict } from '@/composables/useDict'
 import RightToolbar from '@/components/RightToolbar/index.vue'
 import Pagination from '@/components/Pagination/index.vue'
-import Treeselect from '@/components/Treeselect/index.vue'
 import type { FormInstance } from 'element-plus'
 
 const { dict } = useDict('sys_normal_disable', 'sys_user_sex')
@@ -314,22 +280,13 @@ const showSearch = ref(true)
 const total = ref(0)
 const userList = ref<any[]>([])
 const title = ref('')
-const deptOptions = ref<any[]>([])
 const open = ref(false)
-const deptName = ref('')
 const roleOptions = ref<any[]>([])
-const treeRef = ref<any>(null)
 const queryFormRef = ref<FormInstance>()
 const formRef = ref<FormInstance>()
 
-const defaultProps = {
-  children: 'children',
-  label: 'label'
-}
-
 const form = reactive<Record<string, any>>({
   userId: undefined,
-  deptId: undefined,
   userName: undefined,
   nickName: undefined,
   password: undefined,
@@ -338,7 +295,6 @@ const form = reactive<Record<string, any>>({
   sex: undefined,
   status: '0',
   remark: undefined,
-  postIds: [],
   roleIds: []
 })
 
@@ -348,18 +304,16 @@ const queryParams = reactive({
   userName: undefined,
   phonenumber: undefined,
   status: undefined,
-  userType: '00',
-  deptId: undefined
+  userType: '00'
 })
 
 const columns = ref([
   { key: 0, label: '用户编号', visible: true },
   { key: 1, label: '用户名称', visible: true },
   { key: 2, label: '用户昵称', visible: true },
-  { key: 3, label: '部门', visible: true },
-  { key: 4, label: '手机号码', visible: true },
-  { key: 5, label: '状态', visible: true },
-  { key: 6, label: '创建时间', visible: true }
+  { key: 3, label: '手机号码', visible: true },
+  { key: 4, label: '状态', visible: true },
+  { key: 5, label: '创建时间', visible: true }
 ])
 
 const rules = {
@@ -390,41 +344,19 @@ const rules = {
   ]
 }
 
-watch(deptName, (val) => {
-  treeRef.value?.filter(val)
-})
-
 onMounted(() => {
   getList()
-  getDeptTree()
 })
 
 function getList() {
   loading.value = true
-  const params = addDateRange({ ...queryParams }, [])
-  listUser(params).then((response: any) => {
+  listUser(queryParams).then((response: any) => {
     userList.value = response.rows || []
     total.value = response.total || 0
     loading.value = false
   }).catch(() => {
     loading.value = false
   })
-}
-
-function getDeptTree() {
-  deptTreeSelect().then((response: any) => {
-    deptOptions.value = response.data || []
-  })
-}
-
-function filterNode(value: string, data: any) {
-  if (!value) return true
-  return data.label.indexOf(value) !== -1
-}
-
-function handleNodeClick(data: any) {
-  queryParams.deptId = data.id
-  handleQuery()
 }
 
 function handleStatusChange(row: any) {
@@ -449,7 +381,6 @@ function cancel() {
 
 function reset() {
   form.userId = undefined
-  form.deptId = undefined
   form.userName = undefined
   form.nickName = undefined
   form.password = undefined
@@ -458,7 +389,6 @@ function reset() {
   form.sex = undefined
   form.status = '0'
   form.remark = undefined
-  form.postIds = []
   form.roleIds = []
   formRef.value?.resetFields()
 }
@@ -470,8 +400,6 @@ function handleQuery() {
 
 function resetQuery() {
   queryFormRef.value?.resetFields()
-  queryParams.deptId = undefined
-  treeRef.value?.setCurrentKey(null)
   handleQuery()
 }
 
@@ -507,7 +435,6 @@ function handleUpdate(row: any) {
   getUser(userId).then((response: any) => {
     Object.assign(form, response.data || {})
     roleOptions.value = response.roles || []
-    form.postIds = response.postIds || []
     form.roleIds = response.roleIds || []
     open.value = true
     title.value = '修改用户'
