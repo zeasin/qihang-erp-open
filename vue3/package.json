@@ -1,0 +1,53 @@
+{
+  "name": "vue3",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@element-plus/icons-vue": "^2.3.2",
+    "@unhead/vue": "^3.1.7",
+    "axios": "^1.18.1",
+    "clipboard": "^2.0.11",
+    "core-js": "^3.49.0",
+    "echarts": "^6.1.0",
+    "element-plus": "^2.14.2",
+    "file-saver": "^2.0.5",
+    "fuse.js": "^7.4.2",
+    "js-cookie": "^3.0.8",
+    "jsencrypt": "^3.5.4",
+    "marked": "^18.0.6",
+    "nprogress": "^0.2.0",
+    "path-browserify": "^1.0.1",
+    "pinia": "^3.0.4",
+    "screenfull": "^6.0.2",
+    "sortablejs": "^1.15.7",
+    "vue": "^3.5.39",
+    "vue-i18n": "^9.14.5",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@types/clipboard": "^2.0.1",
+    "@types/file-saver": "^2.0.7",
+    "@types/js-cookie": "^3.0.6",
+    "@types/node": "^24.13.2",
+    "@types/nprogress": "^0.2.3",
+    "@types/path-browserify": "^1.0.3",
+    "@types/sortablejs": "^1.15.9",
+    "@vitejs/plugin-vue": "^6.0.7",
+    "@vue/tsconfig": "^0.9.1",
+    "fast-glob": "^3.3.3",
+    "sass": "^1.101.0",
+    "typescript": "~6.0.2",
+    "unplugin-auto-import": "^21.0.0",
+    "unplugin-vue-components": "^32.1.0",
+    "vite": "^8.1.1",
+    "vite-plugin-compression": "^0.5.1",
+    "vite-plugin-svg-icons": "^2.0.1",
+    "vue-tsc": "^3.3.5"
+  }
+}

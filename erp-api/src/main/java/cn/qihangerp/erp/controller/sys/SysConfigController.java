@@ -29,4 +29,21 @@ public class SysConfigController {
             return AjaxResult.success();
         }
     }
+
+    /**
+     * 根据参数键名查询参数值
+     * @param configKey 参数键名
+     * @return
+     */
+    @GetMapping(value = "configKey/{configKey}")
+    public AjaxResult getConfigByKey(@PathVariable String configKey)
+    {
+        List<SysConfig> list = configService.list(new LambdaQueryWrapper<SysConfig>().eq(SysConfig::getConfigKey, configKey));
+        if(list!=null && !list.isEmpty())
+        {
+            return AjaxResult.success(list.get(0));
+        }else{
+            return AjaxResult.success();
+        }
+    }
 }

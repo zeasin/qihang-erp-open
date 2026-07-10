@@ -1,0 +1,11 @@
+@use 'variables' as *;
+
+:export {
+  menuColor: $base-menu-color;
+  menuColorActive: $base-menu-color-active;
+  menuBackground: $base-menu-background;
+  subMenuBackground: $base-sub-menu-background;
+  subMenuHover: $base-sub-menu-hover;
+  sideBarWidth: $base-sidebar-width;
+  logoTitleColor: $base-logo-title-color;
+}

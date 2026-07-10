@@ -1,0 +1,119 @@
+@use 'variables' as *;
+
+.main-container {
+  height: 100%;
+  transition: margin-left 0.28s;
+  margin-left: $base-sidebar-width;
+  position: relative;
+}
+
+.sidebarHide {
+  margin-left: 0 !important;
+}
+
+.sidebar-container {
+  transition: width 0.28s;
+  width: $base-sidebar-width !important;
+  background-color: $base-menu-background;
+  height: 100%;
+  position: fixed;
+  font-size: 0px;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1001;
+  overflow: hidden;
+  box-shadow: 2px 0 6px rgba(0, 21, 41, 0.35);
+
+  .scrollbar-wrapper {
+    overflow-x: hidden !important;
+  }
+
+  .el-scrollbar__bar.is-vertical {
+    right: 0px;
+  }
+
+  .el-scrollbar {
+    height: 100%;
+  }
+
+  &.has-logo .el-scrollbar {
+    height: calc(100% - 50px);
+  }
+
+  .is-horizontal {
+    display: none;
+  }
+
+  a {
+    display: inline-block;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .svg-icon {
+    margin-right: 16px;
+  }
+
+  .el-menu {
+    border: none;
+    height: 100%;
+    width: 100% !important;
+  }
+
+  .el-menu-item,
+  .el-sub-menu__title {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .el-menu-item:hover,
+  .el-sub-menu__title:hover {
+    background-color: rgba(0, 0, 0, 0.06) !important;
+  }
+}
+
+.hideSidebar {
+  .sidebar-container {
+    width: 54px !important;
+  }
+
+  .main-container {
+    margin-left: 54px;
+  }
+
+  .el-menu--collapse {
+    .el-menu-item,
+    .el-sub-menu__title {
+      span {
+        display: none !important;
+      }
+      .svg-icon {
+        margin-right: 0;
+      }
+    }
+  }
+}
+
+.mobile {
+  .main-container {
+    margin-left: 0px;
+  }
+
+  .sidebar-container {
+    transition: transform 0.28s;
+    width: $base-sidebar-width !important;
+  }
+
+  &.hideSidebar .sidebar-container {
+    pointer-events: none;
+    transition-duration: 0.3s;
+    transform: translate3d(-$base-sidebar-width, 0, 0);
+  }
+}
+
+.withoutAnimation,
+.withoutAnimation .sidebar-container {
+  transition: none;
+}
