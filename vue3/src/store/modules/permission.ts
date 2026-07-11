@@ -37,6 +37,10 @@ const viewsMap: Record<string, () => Promise<any>> = {
   'vendor/product/goods_list': () => import('@/views/vendor/product/goods_list.vue'),
   'vendor/product/goods_sku_list': () => import('@/views/vendor/product/goods_sku_list.vue'),
   'vendor/product/price': () => import('@/views/vendor/product/price.vue'),
+  'vendor/supply/index': () => import('@/views/vendor/supply/index.vue'),
+  'vendor/stock/index': () => import('@/views/vendor/stock/index.vue'),
+  'vendor/customer/index': () => import('@/views/vendor/customer/index.vue'),
+  'vendor/stockup/index': () => import('@/views/vendor/stockup/index.vue'),
   'supplier_product_list': () => import('@/views/vendor/product/goods_list.vue'),
 }
 

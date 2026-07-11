@@ -49,7 +49,7 @@ const visible = ref(false)
 const left = ref(0)
 const top = ref(0)
 
-function isActive(path: string): boolean {
+function isActive(path: string | undefined): boolean {
   return path === route.path
 }
 

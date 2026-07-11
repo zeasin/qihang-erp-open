@@ -22,7 +22,7 @@
         </el-select>
       </el-form-item>
       <el-form-item label="状态" prop="status">
-        <el-select v-model="queryParams.status" filterable placeholder="状态">
+        <el-select v-model="queryParams.status" filterable placeholder="状态" @change="handleQuery">
           <el-option label="销售中" value="1" />
           <el-option label="已下架" value="2" />
         </el-select>

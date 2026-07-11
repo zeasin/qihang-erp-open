@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
         iconDirs: [path.resolve(process.cwd(), 'src/assets/icons')],
         symbolId: 'icon-[dir]-[name]',
       }),
-      viteCompression({
+      (viteCompression as any)({
         verbose: false,
         disable: mode === 'development',
         threshold: 10240,

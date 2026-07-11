@@ -2,7 +2,7 @@ import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 import Layout from '@/layout/index.vue'
 
-export const constantRoutes: RouteRecordRaw[] = [
+export const constantRoutes = [
   {
     path: '/redirect',
     component: Layout,
@@ -56,7 +56,7 @@ export const constantRoutes: RouteRecordRaw[] = [
       },
     ],
   },
-]
+] as RouteRecordRaw[]
 
 const router = createRouter({
   history: createWebHistory(),

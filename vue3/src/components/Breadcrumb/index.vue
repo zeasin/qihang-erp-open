@@ -1,7 +1,7 @@
 <template>
   <el-breadcrumb class="app-breadcrumb">
     <el-breadcrumb-item v-for="item in levelList" :key="item.path">
-      <router-link v-if="item.redirect === 'noRedirect' || item.meta?.title" :to="item.redirect || item.path">
+      <router-link v-if="item.redirect === 'noRedirect' || item.meta?.title" :to="(item.redirect as string) || item.path">
         {{ item.meta?.title }}
       </router-link>
     </el-breadcrumb-item>

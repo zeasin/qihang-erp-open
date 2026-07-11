@@ -1,4 +1,5 @@
 export interface Settings {
+  theme: string
   sideTheme: 'theme-dark' | 'theme-light'
   showSettings: boolean
   topNav: boolean
@@ -9,6 +10,7 @@ export interface Settings {
 }
 
 const defaultSettings: Settings = {
+  theme: '#409EFF',
   sideTheme: 'theme-light',
   showSettings: false,
   topNav: false,

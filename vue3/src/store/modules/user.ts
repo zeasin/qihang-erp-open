@@ -21,17 +21,18 @@ export const useUserStore = defineStore('user', {
   }),
   actions: {
     async Login(data: LoginData) {
-      const res = await loginApi(data)
-      setToken(res.token)
-      this.token = res.token
+      const res: any = await loginApi(data)
+      const token = res.token || res.data?.token
+      setToken(token)
+      this.token = token
     },
     async GetInfo() {
-      const res = await getInfo()
-      const user = res.user
+      const res: any = await getInfo()
+      const user = res.user || res.data?.user
       this.name = user.userName
       this.avatar = user.avatar ? import.meta.env.VITE_APP_BASE_API + user.avatar : ''
-      this.roles = res.roles?.length ? res.roles : ['ROLE_DEFAULT']
-      this.permissions = res.permissions || []
+      this.roles = (res.roles || res.data?.roles || []).length ? (res.roles || res.data?.roles) : ['ROLE_DEFAULT']
+      this.permissions = res.permissions || res.data?.permissions || []
       return res
     },
     async LogOut() {

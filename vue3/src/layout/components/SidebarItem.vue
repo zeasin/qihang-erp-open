@@ -2,7 +2,7 @@
   <div v-if="!item.hidden">
     <template v-if="hasOneShowingChild(item.children, item) && (!onlyOneChild.children || onlyOneChild.noShowingChildren) && !item.alwaysShow">
       <el-menu-item :index="resolvePath(onlyOneChild.path)" :class="{ 'submenu-title-noDropdown': !isNest }">
-        <svg-icon v-if="onlyOneChild.meta?.icon || item.meta?.icon" :icon-class="onlyOneChild.meta?.icon || item.meta?.icon" />
+        <svg-icon v-if="onlyOneChild.meta?.icon || item.meta?.icon" :icon-class="onlyOneChild.meta?.icon || (item.meta?.icon as string)" />
         <template #title>
           <span>{{ onlyOneChild.meta?.title }}</span>
         </template>
@@ -41,7 +41,7 @@ const props = withDefaults(defineProps<Props>(), {
   basePath: '',
 })
 
-const onlyOneChild = ref<MenuRecord>()
+const onlyOneChild = ref<MenuRecord>({ path: '' })
 
 function hasOneShowingChild(children: MenuRecord[] | undefined, parent: MenuRecord): boolean {
   const showingChildren = (children || []).filter((item) => {
