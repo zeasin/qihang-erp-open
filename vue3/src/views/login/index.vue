@@ -17,7 +17,7 @@
               placeholder="账号/手机号"
             >
               <template #prefix>
-                <el-icon class="el-input__icon input-icon"><svg-icon icon-class="user" /></el-icon>
+                <el-icon class="el-input__icon input-icon"><User /></el-icon>
               </template>
             </el-input>
           </el-form-item>
@@ -30,7 +30,7 @@
               @keyup.enter="handleLogin"
             >
               <template #prefix>
-                <el-icon class="el-input__icon input-icon"><svg-icon icon-class="password" /></el-icon>
+                <el-icon class="el-input__icon input-icon"><Lock /></el-icon>
               </template>
             </el-input>
           </el-form-item>
@@ -43,7 +43,7 @@
               @keyup.enter="handleLogin"
             >
               <template #prefix>
-                <el-icon class="el-input__icon input-icon"><svg-icon icon-class="validCode" /></el-icon>
+                <el-icon class="el-input__icon input-icon"><Key /></el-icon>
               </template>
             </el-input>
             <div class="login-code">
@@ -73,6 +73,7 @@ import { encrypt, decrypt } from '@/utils/jsencrypt'
 import type { FormInstance, FormRules } from 'element-plus'
 import { useUserStore } from '@/store/modules/user'
 import { getCodeImg } from '@/api/login'
+import { User, Lock, Key } from '@element-plus/icons-vue'
 import { getConfig } from '@/api/system/config'
 
 const router = useRouter()

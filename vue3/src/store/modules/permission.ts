@@ -55,10 +55,80 @@ const viewsMap: Record<string, () => Promise<any>> = {
   'purchase/shipper': () => import('@/views/purchase/shipper/index.vue'),
   'purchase/shipper/index': () => import('@/views/purchase/shipper/index.vue'),
   'goods/supplier/index': () => import('@/views/goods/supplier/index.vue'),
+
+  // afterSale
+  'afterSale/index': () => import('@/views/afterSale/index.vue'),
+
+  // ai
+  'ai/analysis': () => import('@/views/ai/analysis.vue'),
+  'ai/config': () => import('@/views/ai/config.vue'),
+  'ai/history': () => import('@/views/ai/history.vue'),
+
+  // components
+  'components/icons/index': () => import('@/views/components/icons/index.vue'),
+
+  // library
+  'library/logistics_company/index': () => import('@/views/library/logistics_company/index.vue'),
+
+  // marketing
+  'marketing/discount/index': () => import('@/views/marketing/discount/index.vue'),
+
+  // member
+  'member/index': () => import('@/views/member/index.vue'),
+
+  // oauth
+  'oauth/pdd_callback': () => import('@/views/oauth/pdd_callback.vue'),
+  'oauth/weidian_callback': () => import('@/views/oauth/weidian_callback.vue'),
+
+  // openAuth
+  'openAuth/index': () => import('@/views/openAuth/index.vue'),
+
+  // order
+  'order/index': () => import('@/views/order/index.vue'),
+  'order/order_list': () => import('@/views/order/order_list.vue'),
+  'order/item_list': () => import('@/views/order/item_list.vue'),
+
+  // refund
+  'refund/index': () => import('@/views/refund/index.vue'),
+  'refund/shopRefund/index': () => import('@/views/refund/shopRefund/index.vue'),
+
+  // report
+  'report/goods/index': () => import('@/views/report/goods/index.vue'),
+  'report/shop/index': () => import('@/views/report/shop/index.vue'),
+
+  // shipping
+  'shipping/index': () => import('@/views/shipping/index.vue'),
+  'shipping/manual_ship/order_list': () => import('@/views/shipping/manual_ship/order_list.vue'),
+  'shipping/record/index': () => import('@/views/shipping/record/index.vue'),
+  'shipping/logistics/index': () => import('@/views/shipping/logistics/index.vue'),
+  'shipping/stocking/index': () => import('@/views/shipping/stocking/index.vue'),
+
+  // shop
+  'shop/index': () => import('@/views/shop/index.vue'),
+  'shop/goods/index': () => import('@/views/shop/goods/index.vue'),
+  'shop/goods/create': () => import('@/views/shop/goods/create.vue'),
+  'shop/order/index': () => import('@/views/shop/order/index.vue'),
+  'shop/refund/index': () => import('@/views/shop/refund/index.vue'),
+  'shop/group/index': () => import('@/views/shop/group/index.vue'),
+  'shop/merchant/index': () => import('@/views/shop/merchant/index.vue'),
+  'shop/platform/index': () => import('@/views/shop/platform/index.vue'),
+  'shop/region/index': () => import('@/views/shop/region/index.vue'),
+
+  // stock
+  'stock/index': () => import('@/views/stock/index.vue'),
+
+  // wms
+  'wms/warehouse/index': () => import('@/views/wms/warehouse/index.vue'),
+  'wms/warehouse/position': () => import('@/views/wms/warehouse/position.vue'),
+  'wms/goods/index': () => import('@/views/wms/goods/index.vue'),
+  'wms/stockIn/index': () => import('@/views/wms/stockIn/index.vue'),
+  'wms/stockOut/index': () => import('@/views/wms/stockOut/index.vue'),
 }
 
 function loadView(view: string) {
-  if (viewsMap[view]) return viewsMap[view]
+  // 兼容带 .vue 后缀和不带后缀的情况
+  const key = view.replace(/\.vue$/, '')
+  if (viewsMap[key]) return viewsMap[key]
   console.error(`[permission.ts] 找不到组件: ${view}，请在 viewsMap 中添加该映射`)
   return () => import('@/views/error/ComponentNotFound.vue')
 }
