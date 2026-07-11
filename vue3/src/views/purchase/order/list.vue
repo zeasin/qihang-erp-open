@@ -69,7 +69,7 @@
           <el-button size="small" type="text" @click="handleDetail(scope.row)"><el-icon><View /></el-icon>详情</el-button>
           <el-button v-if="scope.row.status === 0" size="small" type="text" @click="handleUpdateStatus(scope.row, 'audit')"><el-icon><CircleCheck /></el-icon>审核</el-button>
           <el-button v-if="scope.row.status === 1 || scope.row.status === 0" size="small" type="text" @click="handleUpdateStatus(scope.row, 'cancel')"><el-icon><Close /></el-icon>取消</el-button>
-          <el-button v-if="scope.row.status === 1" size="small" type="text" @click="handleUpdateStatus(scope.row, 'SupplierShip')"><el-icon><Truck /></el-icon>供应商发货</el-button>
+          <el-button v-if="scope.row.status === 1" size="small" type="text" @click="handleUpdateStatus(scope.row, 'SupplierShip')"><el-icon><Van /></el-icon>供应商发货</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -125,7 +125,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, View, CircleCheck, Close, Truck } from '@element-plus/icons-vue'
+import { Search, Refresh, Plus, View, CircleCheck, Close, Van } from '@element-plus/icons-vue'
 import type { FormInstance } from 'element-plus'
 import { listPurchaseOrder, getPurchaseOrder, updatePurchaseOrder } from '@/api/purchase/purchaseOrder'
 import { listAllSupplier } from '@/api/goods/supplier'

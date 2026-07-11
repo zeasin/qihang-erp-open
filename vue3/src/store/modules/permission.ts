@@ -42,22 +42,25 @@ const viewsMap: Record<string, () => Promise<any>> = {
   'vendor/customer/index': () => import('@/views/vendor/customer/index.vue'),
   'vendor/stockup/index': () => import('@/views/vendor/stockup/index.vue'),
   'supplier_product_list': () => import('@/views/vendor/product/goods_list.vue'),
+  'purchase/order': () => import('@/views/purchase/order/index.vue'),
   'purchase/order/index': () => import('@/views/purchase/order/index.vue'),
   'purchase/order/list': () => import('@/views/purchase/order/list.vue'),
   'purchase/order/create': () => import('@/views/purchase/order/create.vue'),
   'purchase/order/detail': () => import('@/views/purchase/order/detail.vue'),
   'purchase/order/item': () => import('@/views/purchase/order/item.vue'),
   'purchase/order/stock_in': () => import('@/views/purchase/order/stock_in.vue'),
+  'purchase/ship': () => import('@/views/purchase/ship/index.vue'),
   'purchase/ship/index': () => import('@/views/purchase/ship/index.vue'),
   'purchase/ship/create_stock_in_entry': () => import('@/views/purchase/ship/create_stock_in_entry.vue'),
+  'purchase/shipper': () => import('@/views/purchase/shipper/index.vue'),
   'purchase/shipper/index': () => import('@/views/purchase/shipper/index.vue'),
   'goods/supplier/index': () => import('@/views/goods/supplier/index.vue'),
 }
 
 function loadView(view: string) {
   if (viewsMap[view]) return viewsMap[view]
-  console.warn(`Unknown view: ${view}. Using placeholder.`)
-  return () => import('@/views/error/404.vue')
+  console.error(`[permission.ts] 找不到组件: ${view}，请在 viewsMap 中添加该映射`)
+  return () => import('@/views/error/ComponentNotFound.vue')
 }
 
 function filterAsyncRouter(routes: MenuRecord[]): any[] {
