@@ -104,3 +104,9 @@ export function parseStrEmpty(str: any): string {
   if (!str || str === 'undefined' || str === 'null') return ''
   return str
 }
+
+export function amountFormatter(value: number | string | null | undefined): string {
+  if (value === null || value === undefined) return ''
+  const num = typeof value === 'string' ? parseFloat(value) : value
+  return '¥' + num.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')
+}

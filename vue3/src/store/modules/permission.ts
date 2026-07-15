@@ -112,6 +112,8 @@ const viewsMap: Record<string, () => Promise<any>> = {
   'shop/index': () => import('@/views/shop/index.vue'),
   'shop/goods/index': () => import('@/views/shop/goods/index.vue'),
   'shop/goods/create': () => import('@/views/shop/goods/create.vue'),
+  'shop/goods/goods_list': () => import('@/views/shop/goods/goods_list.vue'),
+  'shop/goods/goods_sku': () => import('@/views/shop/goods/goods_sku.vue'),
   'shop/order/index': () => import('@/views/shop/order/index.vue'),
   'shop/refund/index': () => import('@/views/shop/refund/index.vue'),
   'shop/group/index': () => import('@/views/shop/group/index.vue'),

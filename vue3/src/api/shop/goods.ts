@@ -18,3 +18,27 @@ export function addShopGoods(data: Record<string, any>) {
 export function delGoods(id: number | string) {
   return request({ url: '/api/oms-api/shop/goods/del/' + id, method: 'delete' })
 }
+
+export function updateGoodsSku(data: Record<string, any>) {
+  return request({ url: '/api/oms-api/shop/goods/sku/update', method: 'post', data })
+}
+
+export function addShopGoodsSku(data: Record<string, any>) {
+  return request({ url: '/api/oms-api/shop/goods/sku/add', method: 'post', data })
+}
+
+export function insertShopGoodsSku(data: Record<string, any>) {
+  return request({ url: '/api/oms-api/shop/goods/sku/insert', method: 'post', data })
+}
+
+export function updateGoods(data: Record<string, any>) {
+  return request({ url: '/api/oms-api/shop/goods/update', method: 'post', data })
+}
+
+export function delGoodsSku(id: number | string) {
+  return request({ url: '/api/oms-api/shop/goods/sku/del/' + id, method: 'delete' })
+}
+
+export function pullDownloadGoods(data: Record<string, any>) {
+  return request({ url: '/api/oms-api/shop/goods/pull_download', method: 'post', data })
+}
