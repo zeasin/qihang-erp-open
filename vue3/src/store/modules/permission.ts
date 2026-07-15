@@ -87,6 +87,7 @@ const viewsMap: Record<string, () => Promise<any>> = {
   'order/index': () => import('@/views/order/index.vue'),
   'order/order_list': () => import('@/views/order/order_list.vue'),
   'order/item_list': () => import('@/views/order/item_list.vue'),
+  'order/shopOrder/index': () => import('@/views/order/shopOrder/index.vue'),
 
   // refund
   'refund/index': () => import('@/views/refund/index.vue'),
@@ -102,6 +103,9 @@ const viewsMap: Record<string, () => Promise<any>> = {
   'shipping/record/index': () => import('@/views/shipping/record/index.vue'),
   'shipping/logistics/index': () => import('@/views/shipping/logistics/index.vue'),
   'shipping/stocking/index': () => import('@/views/shipping/stocking/index.vue'),
+  'shipping/ewaybillAccount/index': () => import('@/views/shipping/ewaybillAccount/index.vue'),
+  'shipping/ewaybillAccount/': () => import('@/views/shipping/ewaybillAccount/index.vue'),
+  'shipping/ewaybillAccount/account': () => import('@/views/shipping/ewaybillAccount/account.vue'),
 
   // shop
   'shop/index': () => import('@/views/shop/index.vue'),

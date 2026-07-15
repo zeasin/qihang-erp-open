@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function listMerchant(query?: Record<string, any>) {
   return request({
-    url: '/api/erp-api/shop/merchant/list',
+    url: '/api/oms-api/merchant/list',
     method: 'get',
     params: query
   })

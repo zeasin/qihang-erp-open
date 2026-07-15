@@ -21,3 +21,11 @@ export function cancelOrder(data: Record<string, any>) {
 export function offlineOrderCreate(data: Record<string, any>) {
   return request({ url: '/api/oms-api/shop/order/offlineOrderCreate', method: 'post', data })
 }
+
+export function pullOrderDetail(data: Record<string, any>) {
+  return request({ url: '/api/oms-api/shop/order/pull_detail', method: 'post', data })
+}
+
+export function orderPushOms(data: Record<string, any>) {
+  return request({ url: '/api/oms-api/shop/order/push_oms', method: 'post', data })
+}

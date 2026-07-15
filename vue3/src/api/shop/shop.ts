@@ -2,7 +2,7 @@ import request from '@/utils/request'
 
 export function listPlatform(query?: Record<string, any>) {
   return request({
-    url: '/api/erp-api/shop/platform',
+    url: '/api/oms-api/shop/platformList',
     method: 'get',
     params: query
   })
