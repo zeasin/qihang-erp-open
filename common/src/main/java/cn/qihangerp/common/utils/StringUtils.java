@@ -606,4 +606,25 @@ public class StringUtils extends org.apache.commons.lang3.StringUtils
         }
         return sb.toString();
     }
+
+    /**
+     * 将逗号分隔的字符串转换为Long数组
+     *
+     * @param str 逗号分隔的字符串
+     * @return Long数组
+     */
+    public static Long[] splitToLongArray(String str)
+    {
+        if (isEmpty(str))
+        {
+            return new Long[0];
+        }
+        String[] items = str.split(",");
+        Long[] result = new Long[items.length];
+        for (int i = 0; i < items.length; i++)
+        {
+            result[i] = Long.parseLong(items[i].trim());
+        }
+        return result;
+    }
 }

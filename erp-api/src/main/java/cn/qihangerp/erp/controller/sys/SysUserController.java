@@ -156,4 +156,34 @@ public class SysUserController extends BaseController
         user.setUpdateBy(getUsername());
         return toAjax(userService.updateUserStatus(user));
     }
+
+    /**
+     * 查询授权角色
+     */
+    @PreAuthorize("@ss.hasPermi('system:user:edit')")
+    @GetMapping("/authRole/{userId}")
+    public AjaxResult authRole(@PathVariable("userId") Long userId)
+    {
+        SysUser user = userService.selectUserById(userId);
+        if (user == null) {
+            return error("用户不存在");
+        }
+        List<SysRole> roles = roleService.selectRolesByUserId(userId);
+        AjaxResult ajax = AjaxResult.success();
+        ajax.put("user", user);
+        ajax.put("roles", roles);
+        return ajax;
+    }
+
+    /**
+     * 保存授权角色
+     */
+    @PreAuthorize("@ss.hasPermi('system:user:edit')")
+    @PutMapping("/authRole")
+    public AjaxResult insertAuthRole(Long userId, String roleIds)
+    {
+        userService.checkUserDataScope(userId);
+        userService.insertUserAuth(userId, StringUtils.splitToLongArray(roleIds));
+        return success();
+    }
 }

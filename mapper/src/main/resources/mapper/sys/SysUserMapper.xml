@@ -109,7 +109,8 @@ PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
 	</select>
 	
 	<select id="selectUserById" parameterType="Long" resultMap="SysUserResult">
-		<include refid="selectUserVo"/>
+		select distinct u.user_id, u.dept_id, u.user_name, u.nick_name, u.email, u.avatar, u.phonenumber, u.password, u.sex, u.status, u.del_flag, u.login_ip, u.login_date, u.create_by, u.create_time, u.remark
+		from sys_user u
 		where u.user_id = #{userId}
 	</select>
 	
