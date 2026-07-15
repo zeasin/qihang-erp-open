@@ -65,12 +65,6 @@ export function delShop(id) {
     method: 'delete'
   })
 }
-export function syncShop() {
-  return request({
-    url: '/api/oms-api/shop/syncShop',
-    method: 'get'
-  })
-}
 
 // 获取登录账号
 export function getLoginAccount(id) {

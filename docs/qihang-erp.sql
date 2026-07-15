@@ -7185,7 +7185,7 @@ CREATE TABLE `sys_menu`  (
 -- ----------------------------
 INSERT INTO `sys_menu` VALUES (1, '订单管理', 0, 10, '/sale', 'Layout', '', 1, 0, 'M', '0', '0', '', 'sales', 'admin', '2023-12-27 15:00:27', 'admin', '2026-06-25 21:43:01', '系统管理目录');
 INSERT INTO `sys_menu` VALUES (2, '售后管理', 0, 30, '/afterSale', 'Layout', '', 1, 0, 'M', '1', '0', '', 'afterSale', 'admin', '2023-12-27 15:00:27', 'admin', '2026-06-25 21:54:55', '至简官网地址');
-INSERT INTO `sys_menu` VALUES (3, '店铺管理', 0, 80, 'shop', 'Layout', '', 1, 0, 'M', '0', '0', '', 'shop', 'admin', '2023-12-29 13:29:44', 'admin', '2025-07-09 11:17:47', '');
+INSERT INTO `sys_menu` VALUES (3, '渠道管理', 0, 80, 'shop', 'Layout', '', 1, 0, 'M', '0', '0', '', 'shop', 'admin', '2023-12-29 13:29:44', 'admin', '2025-07-09 11:17:47', '');
 INSERT INTO `sys_menu` VALUES (4, '商品管理', 0, 1, 'goods', 'Layout', '', 1, 0, 'M', '0', '0', '', 'goods', 'admin', '2023-12-29 16:53:03', 'admin', '2025-08-21 11:53:50', '');
 INSERT INTO `sys_menu` VALUES (5, '系统设置', 0, 99, '/system', 'Layout', '', 1, 0, 'M', '0', '0', '', 'system', 'admin', '2023-12-27 15:00:27', 'admin', '2023-12-29 09:07:42.856856', '系统管理目录');
 INSERT INTO `sys_menu` VALUES (7, '采购管理', 0, 5, 'purchase', NULL, NULL, 1, 0, 'M', '0', '0', '', 'shopping', 'admin', '2024-12-08 16:42:13', 'admin', '2026-03-30 18:38:36', '');

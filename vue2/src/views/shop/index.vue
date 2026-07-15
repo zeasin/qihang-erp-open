@@ -82,15 +82,7 @@
       <!--          @click="handleDelete"-->
       <!--        >删除</el-button>-->
       <!--      </el-col>-->
-      <el-col :span="1.5">
-        <el-button
-          type="info"
-          plain
-          icon="el-icon-refresh"
-          size="mini"
-          @click="handlePull"
-        >同步店铺数据</el-button>
-      </el-col>
+
       <right-toolbar :show-search.sync="showSearch" @queryTable="getList" />
     </el-row>
 
@@ -712,12 +704,7 @@ export default {
       this.single = selection.length !== 1
       this.multiple = !selection.length
     },
-    handlePull() {
-      syncShop().then(response => {
-        this.$modal.msgSuccess('同步店铺成功')
-        this.getList()
-      })
-    },
+
     /** 新增按钮操作 */
     handleAdd() {
       this.reset()
