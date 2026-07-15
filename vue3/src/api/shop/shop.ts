@@ -8,6 +8,10 @@ export function listPlatform(query?: Record<string, any>) {
   })
 }
 
+export function updatePlatform(data: Record<string, any>) {
+  return request({ url: '/api/oms-api/shop/platform', method: 'put', data })
+}
+
 export function listShop(query?: Record<string, any>) {
   return request({ url: '/api/oms-api/shop/list', method: 'get', params: query })
 }
