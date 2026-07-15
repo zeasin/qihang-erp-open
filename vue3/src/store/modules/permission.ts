@@ -129,7 +129,11 @@ const viewsMap: Record<string, () => Promise<any>> = {
   'wms/goods/index': () => import('@/views/wms/goods/index.vue'),
   'wms/goods/stored_goods_sku': () => import('@/views/wms/goods/stored_goods_sku.vue'),
   'wms/stockIn/index': () => import('@/views/wms/stockIn/index.vue'),
+  'wms/stockIn/create': () => import('@/views/wms/stockIn/create.vue'),
+  'wms/stockIn/stock_in': () => import('@/views/wms/stockIn/stock_in.vue'),
   'wms/stockOut/index': () => import('@/views/wms/stockOut/index.vue'),
+  'wms/stockOut/create': () => import('@/views/wms/stockOut/create.vue'),
+  'wms/stockOut/stock_out': () => import('@/views/wms/stockOut/stock_out.vue'),
   'wms/stock_alert/index': () => import('@/views/wms/stock_alert/index.vue'),
 }
 
