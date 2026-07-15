@@ -7234,7 +7234,7 @@ INSERT INTO `sys_menu` VALUES (1110, '电商平台开关', 11, 8, 'platform/sett
 INSERT INTO `sys_menu` VALUES (1185, '国家地区设置', 11, 9, 'region', 'shop/region/index', NULL, 1, 0, 'C', '1', '0', '', 'color', 'admin', '2024-03-21 20:05:39', 'admin', '2025-07-03 13:43:32', '');
 INSERT INTO `sys_menu` VALUES (1186, '定时任务配置', 11, 50, 'sys_task', 'system/task/index', NULL, 1, 0, 'C', '0', '0', '', 'time-range', 'admin', '2024-03-22 19:29:20', 'admin', '2025-07-05 23:09:18', '');
 INSERT INTO `sys_menu` VALUES (2090, '角色管理', 5, 2, 'role', 'system/role/index', NULL, 1, 0, 'C', '0', '0', NULL, 'peoples', 'admin', '2024-03-31 12:40:50', '', NULL, '');
-INSERT INTO `sys_menu` VALUES (2096, '订单发货出库', 9, 10, 'stocking', 'shipping/stocking', NULL, 1, 0, 'C', '0', '0', '', 'email', 'admin', '2024-07-20 11:53:24', 'admin', '2025-10-10 18:15:29', '');
+INSERT INTO `sys_menu` VALUES (2096, '订单备货', 9, 10, 'stocking', 'shipping/stocking', NULL, 1, 0, 'C', '0', '0', '', 'email', 'admin', '2024-07-20 11:53:24', 'admin', '2025-10-10 18:15:29', '');
 INSERT INTO `sys_menu` VALUES (2108, '供应商档案', 7, 90, 'supplier_list', 'goods/supplier/index', NULL, 1, 0, 'C', '0', '0', '', 'people', 'admin', '2024-08-25 18:27:55', 'admin', '2026-07-11 19:57:34', '');
 INSERT INTO `sys_menu` VALUES (2114, '仓库管理', 9, 90, 'warehouse', 'wms/warehouse/index.vue', NULL, 1, 0, 'C', '0', '0', '', 'cloudWarehouse', 'admin', '2024-09-21 20:07:26', 'admin', '2025-10-12 08:49:06', '');
 INSERT INTO `sys_menu` VALUES (2117, '仓位管理', 9, 91, 'position', 'wms/warehouse/position', NULL, 1, 0, 'C', '1', '0', '', '404', 'admin', '2024-09-22 11:52:18', 'admin', '2024-09-22 14:48:21', '');
