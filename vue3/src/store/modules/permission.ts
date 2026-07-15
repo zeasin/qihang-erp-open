@@ -113,6 +113,7 @@ const viewsMap: Record<string, () => Promise<any>> = {
   'shop/merchant/index': () => import('@/views/shop/merchant/index.vue'),
   'shop/platform/index': () => import('@/views/shop/platform/index.vue'),
   'shop/region/index': () => import('@/views/shop/region/index.vue'),
+  'shop/pull_log': () => import('@/views/shop/pull_log.vue'),
 
   // stock
   'stock/index': () => import('@/views/stock/index.vue'),

@@ -31,3 +31,7 @@ export function updateShop(data: Record<string, any>) {
 export function delShop(id: number | string) {
   return request({ url: '/api/oms-api/shop/shop/' + id, method: 'delete' })
 }
+
+export function listShopPullLogs(query?: Record<string, any>) {
+  return request({ url: '/api/oms-api/shop/pull_logs_list', method: 'get', params: query })
+}
