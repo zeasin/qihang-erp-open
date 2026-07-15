@@ -36,10 +36,15 @@ public class GoodsController extends BaseController
      * 条件：商品编码、SKU、商品名称
      */
     @GetMapping("/searchSku")
-    public TableDataInfo searchSkuBy(String keyword)
+    public TableDataInfo searchSkuBy(Long goodsId,String keyword)
     {
-        List<GoodsSpecListVo> list = goodsService.searchGoodsSpec(keyword);
-        return getDataTable(list);
+        if(goodsId!=null&&goodsId>0){
+            List<OGoodsSku> oGoodsSkus = goodsService.querySkuByGoodsId(goodsId);
+            return getDataTable(oGoodsSkus);
+        }else {
+            List<GoodsSpecListVo> list = goodsService.searchGoodsSpec(keyword);
+            return getDataTable(list);
+        }
     }
 
     @GetMapping("/sku_list")

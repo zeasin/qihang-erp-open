@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-form :model="queryParams" ref="queryFormRef" size="small" :inline="true" v-show="showSearch" label-width="88px">
+    <el-form v-show="showSearch" ref="queryFormRef" :model="queryParams" size="small" :inline="true" label-width="88px">
       <el-form-item label="商品名称" prop="productName">
         <el-input v-model="queryParams.productName" placeholder="请输入商品名称" clearable @keyup.enter="handleQuery" />
       </el-form-item>
@@ -8,12 +8,13 @@
         <el-input v-model="queryParams.productNum" placeholder="请输入商品编号" clearable @keyup.enter="handleQuery" />
       </el-form-item>
       <el-form-item label="商品分类" prop="categoryId">
-        <treeselect :options="categoryTree" placeholder="请选择商品分类" v-model="queryParams.categoryId" style="width: 230px;" />
+        <el-select v-model="queryParams.categoryId" placeholder="请选择商品分类" clearable @change="handleQuery" style="width:230px">
+          <el-option v-for="item in categoryTree" :key="item.id" :label="item.name" :value="item.id" />
+        </el-select>
       </el-form-item>
       <el-form-item label="状态" prop="status">
-        <el-select v-model="queryParams.status" filterable clearable placeholder="状态" @change="handleQuery">
-          <el-option label="销售中" :value="1"></el-option>
-          <el-option label="已下架" :value="2"></el-option>
+        <el-select v-model="queryParams.status" clearable placeholder="状态" @change="handleQuery">
+          <el-option label="销售中" :value="1" /><el-option label="已下架" :value="2" />
         </el-select>
       </el-form-item>
       <el-form-item>
@@ -26,134 +27,100 @@
       <el-col :span="1.5">
         <el-button type="primary" plain size="small" @click="handleAdd"><el-icon><Plus /></el-icon>添加供应商商品</el-button>
       </el-col>
-      <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
+      <RightToolbar :showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
     <el-table v-loading="loading" :data="goodsList">
       <el-table-column label="商品编号" align="left" prop="productNum" width="150">
-        <template #default="scope">
-          {{ scope.row.productNum || '-' }}<br/>
-          <el-tag size="small">{{ getCategoryName(scope.row.categoryId) }}</el-tag>
-        </template>
+        <template #default="scope">{{ scope.row.productNum || '-' }}<br /><el-tag size="small">{{ getCategoryName(scope.row.categoryId) }}</el-tag></template>
       </el-table-column>
       <el-table-column label="商品图片" align="center" prop="imageUrl" width="100">
-        <template #default="scope">
-          <image-preview :src="scope.row.imageUrl" :width="50" :height="50" />
-        </template>
+        <template #default="scope"><ImagePreview :src="scope.row.imageUrl" :width="50" :height="50" /></template>
       </el-table-column>
       <el-table-column label="商品名称" align="left" prop="productName" width="250" />
       <el-table-column label="单位" align="center" prop="unitName" width="80" />
-      <el-table-column label="SKU数量" align="center" prop="skuCount" width="100">
-        <template #default="scope">
-          <el-button size="small" type="text" @click="handleViewSku(scope.row)">{{ scope.row.skuCount || 0 }}</el-button>
-        </template>
+      <el-table-column label="SKU数量" align="center" width="100">
+        <template #default="scope"><el-button size="small" type="text" @click="handleViewSku(scope.row)">{{ scope.row.skuCount || 0 }}</el-button></template>
       </el-table-column>
+      <el-table-column label="供应商" align="center" prop="supplierName" width="150" />
       <el-table-column label="状态" align="center" prop="status" width="80">
-        <template #default="scope">
-          <el-tag v-if="scope.row.status === 1" size="small">销售中</el-tag>
-          <el-tag v-else-if="scope.row.status === 2" size="small">已下架</el-tag>
-          <el-tag v-else size="small">待审核</el-tag>
-        </template>
+        <template #default="scope"><el-tag v-if="scope.row.status===1" size="small">销售中</el-tag><el-tag v-else-if="scope.row.status===2" size="small">已下架</el-tag><el-tag v-else size="small">待审核</el-tag></template>
       </el-table-column>
-      <el-table-column label="创建时间" align="center" prop="createTime" width="160">
+      <el-table-column label="创建时间" align="center" prop="createTime" width="160"><template #default="scope">{{ parseTime(scope.row.createTime) }}</template></el-table-column>
+      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="180">
         <template #default="scope">
-          {{ parseTime(scope.row.createTime) }}
-        </template>
-      </el-table-column>
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="200">
-        <template #default="scope">
-          <el-button size="small" type="text" @click="handleEdit(scope.row)"><el-icon><Edit /></el-icon>编辑</el-button>
-          <el-button v-if="scope.row.status === 1" size="small" type="text" @click="handleChangeStatus(scope.row, 2)"><el-icon><ArrowDown /></el-icon>下架</el-button>
-          <el-button v-else-if="scope.row.status === 2" size="small" type="text" @click="handleChangeStatus(scope.row, 1)"><el-icon><ArrowUp /></el-icon>上架</el-button>
+          <el-button size="small" type="text" @click="handleChangeStatus(scope.row, scope.row.status===1?2:1)"><el-icon><ArrowUp /></el-icon>{{ scope.row.status===1?'下架':'上架' }}</el-button>
           <el-button size="small" type="text" @click="handleDelete(scope.row)"><el-icon><Delete /></el-icon>删除</el-button>
         </template>
       </el-table-column>
     </el-table>
-
-    <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
+    <pagination v-show="total>0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
     <el-dialog title="SKU列表" v-model="skuOpen" width="900px" append-to-body>
       <el-table :data="skuList" border>
-        <el-table-column prop="skuCode" label="SKU编码" width="150" />
-        <el-table-column prop="standard" label="规格" width="150" />
-        <el-table-column prop="barCode" label="条码" width="150" />
-        <el-table-column prop="price" label="价格" width="100" />
-        <el-table-column prop="colorValue" label="颜色" width="100" />
-        <el-table-column prop="sizeValue" label="尺寸" width="100" />
-        <el-table-column prop="status" label="状态">
-          <template #default="scope">
-            <el-tag v-if="scope.row.status === 1" size="small">销售中</el-tag>
-            <el-tag v-else-if="scope.row.status === 2" size="small">已下架</el-tag>
-          </template>
-        </el-table-column>
+        <el-table-column prop="skuCode" label="SKU编码" width="150" /><el-table-column prop="standard" label="规格" width="150" />
+        <el-table-column prop="barCode" label="条码" width="150" /><el-table-column prop="price" label="价格" width="100" />
+        <el-table-column prop="status" label="状态"><template #default="scope"><el-tag v-if="scope.row.status===1" size="small">销售中</el-tag><el-tag v-else size="small">已下架</el-tag></template></el-table-column>
       </el-table>
     </el-dialog>
 
-    <el-dialog :title="dialogTitle" v-model="formOpen" width="1000px" append-to-body>
-      <el-form ref="productFormRef" :model="productForm" :rules="productRules" label-width="120px">
-        <el-form-item label="供应商" prop="supplierId" v-if="!isSupplier">
-          <el-select v-model="productForm.supplierId" filterable clearable placeholder="请选择供应商" style="width: 300px;">
-            <el-option v-for="item in supplierList" :key="item.id" :label="item.name" :value="item.id"></el-option>
+    <!-- 第一步：选择商品(SPU)弹窗 -->
+    <el-dialog title="步骤1：从商品库选择商品" v-model="step1Open" width="900px" append-to-body>
+      <el-form :inline="true" size="small" label-width="80px">
+        <el-form-item label="供应商">
+          <el-select v-model="selectSupplierId" placeholder="请选择供应商" filterable style="width:200px">
+            <el-option v-for="item in supplierList" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="商品名称" prop="productName">
-          <el-input v-model="productForm.productName" placeholder="请输入商品名称" style="width: 300px;" />
+        <el-form-item label="商品名称">
+          <el-input v-model="spuKeyword" placeholder="搜索商品名称" clearable style="width:220px" @keyup.enter="loadErpGoodsSpu" />
         </el-form-item>
-        <el-form-item label="商品图片" prop="imageUrl">
-          <image-upload v-model="productForm.imageUrl" :limit="1" />
-          <el-input v-model="productForm.imageUrl" placeholder="请输入商品图片Url" style="width: 300px;" />
+        <el-form-item>
+          <el-button type="primary" size="small" @click="loadErpGoodsSpu"><el-icon><Search /></el-icon>搜索</el-button>
         </el-form-item>
-        <el-form-item label="商品编号" prop="productNum">
-          <el-input v-model="productForm.productNum" placeholder="请输入商品编号" style="width: 300px;" />
-        </el-form-item>
-        <el-form-item label="商品分类" prop="categoryId">
-          <treeselect :options="categoryTree" placeholder="请选择商品分类" v-model="productForm.categoryId" style="width: 300px;" />
-        </el-form-item>
-        <el-form-item label="单位名称" prop="unitName">
-          <el-input v-model="productForm.unitName" placeholder="请输入单位名称" style="width: 300px;" />
-        </el-form-item>
-        <el-form-item label="备注" prop="remark">
-          <el-input v-model="productForm.remark" type="textarea" placeholder="请输入备注" style="width: 500px;" />
-        </el-form-item>
-
-        <el-form-item label="SKU列表">
-          <div style="margin-bottom: 10px;">
-            <el-button type="primary" size="small" @click="addSkuItem"><el-icon><Plus /></el-icon>添加SKU</el-button>
-          </div>
-        </el-form-item>
-        <el-table :data="productForm.itemList || []" border style="width: 100%;">
-          <el-table-column prop="skuCode" label="SKU编码" width="150">
-            <template #default="scope">
-              <el-input v-model="scope.row.skuCode" placeholder="SKU编码" size="small" />
-            </template>
-          </el-table-column>
-          <el-table-column prop="standard" label="规格" width="150">
-            <template #default="scope">
-              <el-input v-model="scope.row.standard" placeholder="规格" size="small" />
-            </template>
-          </el-table-column>
-          <el-table-column prop="barCode" label="条码" width="150">
-            <template #default="scope">
-              <el-input v-model="scope.row.barCode" placeholder="条码" size="small" />
-            </template>
-          </el-table-column>
-          <el-table-column prop="price" label="价格" width="120">
-            <template #default="scope">
-              <el-input-number v-model="scope.row.price" placeholder="价格" size="small" :min="0" :precision="2" style="width: 100%;" />
-            </template>
-          </el-table-column>
-          <el-table-column label="操作" width="80">
-            <template #default="scope">
-              <el-button type="danger" size="small" @click="deleteSkuItem(scope.$index)"><el-icon><Delete /></el-icon>删除</el-button>
-            </template>
-          </el-table-column>
-        </el-table>
       </el-form>
+      <el-table v-loading="spuLoading" :data="spuList" highlight-current-row @current-change="handleSpuSelect">
+        <el-table-column label="商品图片" width="60"><template #default="scope"><el-image style="width:40px;height:40px" :src="scope.row.image||scope.row.goodsImage" /></template></el-table-column>
+        <el-table-column label="商品名称" align="left" prop="goodsName" min-width="200" />
+        <el-table-column label="商品编号" align="center" prop="goodsNum" width="150" />
+        <el-table-column label="分类" align="center" prop="categoryName" width="120" />
+        <el-table-column label="操作" align="center" width="100">
+          <template #default="scope">
+            <el-button type="primary" size="small" @click="selectSpu(scope.row)">选择SKU</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <pagination v-show="spuTotal>0" :total="spuTotal" v-model:page="spuPage" v-model:limit="spuPageSize" @pagination="loadErpGoodsSpu" />
+    </el-dialog>
+
+    <!-- 第二步：选择SKU并设置价格 -->
+    <el-dialog title="步骤2：选择SKU并设置供应商价格" v-model="step2Open" width="900px" append-to-body>
+      <el-form :inline="true" size="small" label-width="80px">
+        <el-form-item label="供应商">
+          <el-select v-model="selectSupplierId" placeholder="请选择供应商" filterable style="width:200px">
+            <el-option v-for="item in supplierList" :key="item.id" :label="item.name" :value="item.id" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <el-alert title="选中商品" type="info" :closable="false" show-icon style="margin-bottom:15px">
+        <template #default>{{ selectedSpu?.goodsName }}（编号：{{ selectedSpu?.goodsNum }}）</template>
+      </el-alert>
+      <el-table v-loading="skuLoading" :data="spuSkuList" @selection-change="handleSkuSelect">
+        <el-table-column type="selection" width="55" align="center" />
+        <el-table-column label="SKU编码" align="center" prop="skuCode" width="150" />
+        <el-table-column label="规格" align="center" prop="skuName" width="150" />
+        <el-table-column label="零售价" align="center" prop="retailPrice" width="100">
+          <template #default="scope">{{ amountFormatter(scope.row.retailPrice) }}</template>
+        </el-table-column>
+        <el-table-column label="供应商价格" width="180">
+          <template #default="scope">
+            <el-input-number v-model="scope.row.supplierPrice" :min="0" :precision="2" controls-position="right" size="small" style="width:140px" />
+          </template>
+        </el-table-column>
+      </el-table>
       <template #footer>
-        <div class="dialog-footer">
-          <el-button type="primary" @click="submitForm">确 定</el-button>
-          <el-button @click="cancelForm">取 消</el-button>
-        </div>
+        <el-button @click="step2Open=false;step1Open=true">上一步</el-button>
+        <el-button type="primary" :disabled="selectedSkus.length===0" @click="submitSelect">确认添加 ({{ selectedSkus.length }}个SKU)</el-button>
       </template>
     </el-dialog>
   </div>
@@ -162,246 +129,83 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, Refresh, Plus, Edit, ArrowDown, ArrowUp, Delete } from '@element-plus/icons-vue'
-import { listGoods, getGoodsItem, addGoodsItem, updateGoodsItem, delGoodsSpec, updateGoodsStatus } from '@/api/goods/supplierGoods'
+import { Search, Refresh, Plus, ArrowUp, Delete } from '@element-plus/icons-vue'
+import { listGoods, getGoodsItem, addGoodsItem, delGoodsSpec, updateGoodsStatus } from '@/api/goods/supplierGoods'
 import { listCategory } from '@/api/goods/category'
 import { listSupplier } from '@/api/goods/supplier'
-import { getUserProfile } from '@/api/system/user'
-import { parseTime } from '@/utils/zhijian'
-import Treeselect from '@/components/Treeselect/index.vue'
-import ImagePreview from '@/components/ImagePreview/index.vue'
-import ImageUpload from '@/components/ImageUpload/index.vue'
+import { listGoods as listErpGoods } from '@/api/goods/goods'
+import { parseTime, amountFormatter } from '@/utils/zhijian'
 import Pagination from '@/components/Pagination/index.vue'
 import RightToolbar from '@/components/RightToolbar/index.vue'
-import type { FormInstance } from 'element-plus'
+import ImagePreview from '@/components/ImagePreview/index.vue'
 
-const headers = { Authorization: 'Bearer ' + '' }
-const loading = ref(true)
-const showSearch = ref(true)
-const total = ref(0)
-const goodsList = ref<any[]>([])
-const categoryList = ref<any[]>([])
-const categoryTree = ref<any[]>([])
-const supplierList = ref<any[]>([])
-const skuOpen = ref(false)
-const skuList = ref<any[]>([])
-const formOpen = ref(false)
-const dialogTitle = ref('')
-const userIdentity = ref<number | null>(null)
-const queryFormRef = ref<FormInstance>()
-const productFormRef = ref<FormInstance>()
+const loading=ref(true);const showSearch=ref(true);const total=ref(0)
+const goodsList=ref<any[]>([]);const categoryList=ref<any[]>([]);const categoryTree=ref<any[]>([]);const supplierList=ref<any[]>([])
+const skuOpen=ref(false);const skuList=ref<any[]>([])
 
-const queryParams = reactive({
-  pageNum: 1,
-  pageSize: 10,
-  productName: null,
-  productNum: null,
-  categoryId: null,
-  status: null
-})
+// 步骤1: 选择SPU
+const step1Open=ref(false);const spuLoading=ref(false);const spuTotal=ref(0);const spuPage=ref(1);const spuPageSize=ref(10)
+const spuList=ref<any[]>([]);const spuKeyword=ref('');const selectSupplierId=ref<number|null>(null)
+const selectedSpu=ref<any>(null)
 
-const productForm = reactive<Record<string, any>>({
-  id: null,
-  supplierId: null,
-  productName: null,
-  imageUrl: null,
-  productNum: null,
-  categoryId: null,
-  unitName: null,
-  remark: null,
-  itemList: []
-})
+// 步骤2: 选择SKU
+const step2Open=ref(false);const skuLoading=ref(false)
+const spuSkuList=ref<any[]>([]);const selectedSkus=ref<any[]>([])
 
-const productRules = {
-  supplierId: [{ required: true, message: '不能为空', trigger: 'blur' }],
-  productName: [{ required: true, message: '商品名称不能为空', trigger: 'blur' }]
+const queryParams=reactive({pageNum:1,pageSize:10,productName:null as string|null,productNum:null as string|null,categoryId:null as number|null,status:null as number|null})
+
+function getList(){loading.value=true;listGoods(queryParams).then((res:any)=>{goodsList.value=res.rows||[];total.value=res.total||0;loading.value=false}).catch(()=>{loading.value=false})}
+function handleQuery(){queryParams.pageNum=1;getList()}
+function resetQuery(){queryParams.productName=null;queryParams.productNum=null;queryParams.categoryId=null;queryParams.status=null;handleQuery()}
+function getCategoryName(id:number){return categoryList.value.find((x:any)=>x.id===id)?.name||''}
+function handleViewSku(row:any){getGoodsItem(row.id).then((res:any)=>{skuList.value=res.data?.itemList||[];skuOpen.value=true})}
+function handleChangeStatus(row:any,s:number){updateGoodsStatus({id:row.id,status:s}).then(()=>{ElMessage.success('操作成功');getList()})}
+function handleDelete(row:any){ElMessageBox.confirm('确认删除？').then(()=>delGoodsSpec(row.id)).then(()=>{ElMessage.success('删除成功');getList()})}
+
+function handleAdd(){
+  if(supplierList.value.length===0){ElMessage.warning('请先添加供应商');return}
+  selectSupplierId.value=null;spuKeyword.value='';selectedSpu.value=null;spuSkuList.value=[];selectedSkus.value=[]
+  step1Open.value=true;loadErpGoodsSpu()
 }
 
-const isSupplier = ref(false)
-
-function buildTree(list: any[], parentId: number): any[] {
-  const tree: any[] = []
-  for (const item of list) {
-    if (item.parentId === parentId) {
-      tree.push({
-        id: item.id,
-        label: item.name,
-        children: buildTree(list, item.id)
-      })
-    }
-  }
-  return tree
+// 加载商品库SPU
+function loadErpGoodsSpu(){
+  spuLoading.value=true
+  listErpGoods({pageNum:spuPage.value,pageSize:spuPageSize.value,name:spuKeyword.value||undefined}).then((res:any)=>{
+    spuList.value=res.rows||[];spuTotal.value=res.total||0;spuLoading.value=false
+  }).catch(()=>{spuLoading.value=false})
 }
 
-function getCategoryName(categoryId: number | null): string {
-  if (!categoryId) return '-'
-  const category = categoryList.value.find((x: any) => x.id === categoryId)
-  return category ? category.name : '-'
+function handleSpuSelect(val:any){selectedSpu.value=val}
+
+// 选择SPU→加载SKU→打开步骤2
+function selectSpu(row:any){
+  selectedSpu.value=row
+  skuLoading.value=true
+  // 使用searchSku加载该goods下的所有SKU
+  import('@/api/goods/goods').then(({searchSku})=>{
+    searchSku({goodsId:row.id,pageSize:200}).then((res:any)=>{
+      spuSkuList.value=(res.rows||[]).map((s:any)=>({...s,supplierPrice:s.purPrice||0}))
+      selectedSkus.value=[];skuLoading.value=false;step1Open.value=false;step2Open.value=true
+    }).catch(()=>{skuLoading.value=false})
+  })
 }
 
-function getList() {
-  loading.value = true
-  listGoods(queryParams).then((response: any) => {
-    goodsList.value = response.rows || []
-    total.value = response.total || 0
-    loading.value = false
-  }).catch(() => { loading.value = false })
+function handleSkuSelect(selection:any[]){selectedSkus.value=selection}
+
+function submitSelect(){
+  if(!selectSupplierId.value){ElMessage.warning('请选择供应商');return}
+  if(selectedSkus.value.length===0){ElMessage.warning('请选择SKU');return}
+  const items=selectedSkus.value.map((s:any)=>({erpSkuId:s.skuId||s.id,skuCode:s.skuCode,skuName:s.skuName,price:s.supplierPrice||0}))
+  addGoodsItem({supplierId:selectSupplierId.value,items}).then((res:any)=>{
+    if(res.code===200){ElMessage.success('添加成功，已关联商品库');step2Open.value=false;getList()}
+    else ElMessage.error(res.msg||'添加失败')
+  })
 }
 
-function handleQuery() {
-  queryParams.pageNum = 1
+onMounted(()=>{
+  listCategory({}).then((res:any)=>{categoryList.value=res.rows||[];categoryTree.value=res.rows||[]})
+  listSupplier({pageSize:100}).then((res:any)=>{supplierList.value=res.rows||[]})
   getList()
-}
-
-function resetQuery() {
-  queryFormRef.value?.resetFields()
-  handleQuery()
-}
-
-function handleViewSku(row: any) {
-  getGoodsItem(row.id).then((response: any) => {
-    skuList.value = (response.data && response.data.itemList) ? response.data.itemList : []
-    skuOpen.value = true
-  })
-}
-
-function handleAdd() {
-  resetForm()
-  productForm.itemList = []
-  addSkuItem()
-  dialogTitle.value = '添加供应商商品'
-  if (isSupplier.value && supplierList.value.length > 0) {
-    productForm.supplierId = supplierList.value[0].id
-  }
-  formOpen.value = true
-}
-
-function handleEdit(row: any) {
-  resetForm()
-  getGoodsItem(row.id).then((response: any) => {
-    if (response.data) {
-      Object.assign(productForm, {
-        id: response.data.id,
-        supplierId: response.data.supplierId,
-        productName: response.data.productName,
-        imageUrl: response.data.imageUrl,
-        productNum: response.data.productNum,
-        categoryId: response.data.categoryId,
-        unitName: response.data.unitName,
-        remark: response.data.remark,
-        itemList: response.data.itemList || []
-      })
-      dialogTitle.value = '编辑供应商商品'
-      formOpen.value = true
-    }
-  })
-}
-
-function resetForm() {
-  Object.assign(productForm, {
-    id: null,
-    supplierId: null,
-    productName: null,
-    imageUrl: null,
-    productNum: null,
-    categoryId: null,
-    unitName: null,
-    remark: null,
-    itemList: []
-  })
-}
-
-function addSkuItem() {
-  if (!productForm.itemList) productForm.itemList = []
-  productForm.itemList.push({ id: null, skuCode: '', standard: '', barCode: '', price: 0 })
-}
-
-function deleteSkuItem(index: number) {
-  productForm.itemList.splice(index, 1)
-}
-
-function cancelForm() {
-  formOpen.value = false
-  resetForm()
-}
-
-function submitForm() {
-  productFormRef.value?.validate((valid: boolean) => {
-    if (valid) {
-      if (!productForm.itemList || productForm.itemList.length === 0) {
-        ElMessage.warning('请至少添加一个SKU')
-        return
-      }
-      for (let i = 0; i < productForm.itemList.length; i++) {
-        if (!productForm.itemList[i].standard) {
-          ElMessage.warning('第' + (i + 1) + '个SKU的规格不能为空')
-          return
-        }
-      }
-      if (productForm.id) {
-        updateGoodsItem({ ...productForm }).then((response: any) => {
-          ElMessage.success('修改成功')
-          formOpen.value = false
-          getList()
-        })
-      } else {
-        addGoodsItem({ ...productForm }).then((response: any) => {
-          ElMessage.success('添加成功')
-          formOpen.value = false
-          getList()
-        })
-      }
-    }
-  })
-}
-
-function handleChangeStatus(row: any, status: number) {
-  const action = status === 1 ? '上架' : '下架'
-  ElMessageBox.confirm('是否确认' + action + '该商品？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    return updateGoodsStatus({ id: row.id, status })
-  }).then(() => {
-    getList()
-    ElMessage.success('操作成功')
-  }).catch(() => {})
-}
-
-function handleDelete(row: any) {
-  ElMessageBox.confirm('是否确认删除该商品？', '提示', {
-    confirmButtonText: '确定',
-    cancelButtonText: '取消',
-    type: 'warning'
-  }).then(() => {
-    return delGoodsSpec(row.id)
-  }).then(() => {
-    getList()
-    ElMessage.success('删除成功')
-  }).catch(() => {})
-}
-
-onMounted(() => {
-  getUserProfile().then((res: any) => {
-    userIdentity.value = res.data ? res.data.userType : null
-    isSupplier.value = userIdentity.value === 30
-    if (isSupplier.value) {
-      listSupplier({ pageNum: 1, pageSize: 100 }).then((resp: any) => {
-        if (resp.rows && resp.rows.length > 0) {
-          productForm.supplierId = resp.rows[0].id
-        }
-      })
-    } else {
-      listSupplier({ pageNum: 1, pageSize: 100 }).then((resp: any) => {
-        supplierList.value = resp.rows || []
-      })
-    }
-  })
-  listCategory({}).then((response: any) => {
-    categoryList.value = response.rows || []
-    categoryTree.value = buildTree(response.rows || [], 0)
-    getList()
-  })
 })
 </script>
