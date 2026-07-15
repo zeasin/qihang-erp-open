@@ -15,7 +15,7 @@
           style="padding: 8px 0; border-radius: 4px; border: 1px solid transparent"
         >
           <el-icon :size="24">
-            <component :is="icon" />
+            <render-icon :icon-class="icon" :size="24" />
           </el-icon>
           <div style="font-size: 12px; margin-top: 4px; overflow: hidden; text-overflow: ellipsis">{{ icon }}</div>
         </div>
@@ -27,6 +27,11 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import * as Icons from '@element-plus/icons-vue'
+import RenderIcon from '@/components/RenderIcon/index.vue'
+
+const emit = defineEmits<{
+  (e: 'selected', icon: string): void
+}>()
 
 const visible = ref(false)
 const selected = ref('')
@@ -48,6 +53,7 @@ function show(iconName?: string) {
 function selectIcon(icon: string) {
   selected.value = icon
   visible.value = false
+  emit('selected', icon)
 }
 
 defineExpose({ show, selected })

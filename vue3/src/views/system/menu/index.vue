@@ -29,7 +29,7 @@
       <el-table-column prop="menuName" label="菜单名称" :show-overflow-tooltip="true" width="160" />
       <el-table-column prop="icon" label="图标" align="center" width="100">
         <template #default="scope">
-          <svg-icon :icon-class="scope.row.icon" />
+          <render-icon :icon-class="scope.row.icon" :size="20" />
         </template>
       </el-table-column>
       <el-table-column prop="orderNum" label="排序" width="60" />
@@ -71,17 +71,13 @@
           </el-col>
           <el-col :span="24" v-if="form.menuType != 'F'">
             <el-form-item label="菜单图标" prop="icon">
-              <el-popover placement="bottom-start" width="460" trigger="click" @show="handleIconShow">
-                <template #reference>
-                  <el-input v-model="form.icon" placeholder="点击选择图标" readonly>
-                    <template #prefix>
-                      <el-icon v-if="form.icon" :size="18"><component :is="form.icon" /></el-icon>
-                      <el-icon v-else><Search /></el-icon>
-                    </template>
-                  </el-input>
+              <el-input v-model="form.icon" placeholder="点击选择图标" readonly @click="handleIconClick">
+                <template #prefix>
+                  <render-icon v-if="form.icon" :icon-class="form.icon" :size="18" />
+                  <el-icon v-else><Search /></el-icon>
                 </template>
-                <IconSelect ref="iconSelectRef" @selected="selectedIcon" />
-              </el-popover>
+              </el-input>
+              <IconSelect ref="iconSelectRef" @selected="selectedIcon" />
             </el-form-item>
           </el-col>
           <el-col :span="12">
@@ -199,6 +195,7 @@ import SvgIcon from '@/components/SvgIcon/index.vue'
 import RightToolbar from '@/components/RightToolbar/index.vue'
 import Treeselect from '@/components/Treeselect/index.vue'
 import IconSelect from '@/components/IconSelect/index.vue'
+import RenderIcon from '@/components/RenderIcon/index.vue'
 import type { FormInstance } from 'element-plus'
 
 const { dict } = useDict('sys_show_hide', 'sys_normal_disable')
@@ -251,7 +248,7 @@ function selectedIcon(name: string) {
   form.icon = name
 }
 
-function handleIconShow() {
+function handleIconClick() {
   iconSelectRef.value?.show(form.icon)
 }
 

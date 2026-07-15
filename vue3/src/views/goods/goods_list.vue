@@ -72,17 +72,17 @@
           <el-icon><Plus /></el-icon>添加商品
         </el-button>
       </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="success"
-          plain
-          size="small"
-          :disabled="multiple"
-          @click="handlePush"
-        >
-          <el-icon><Edit /></el-icon>推送到商户
-        </el-button>
-      </el-col>
+<!--      <el-col :span="1.5">-->
+<!--        <el-button-->
+<!--          type="success"-->
+<!--          plain-->
+<!--          size="small"-->
+<!--          :disabled="multiple"-->
+<!--          @click="handlePush"-->
+<!--        >-->
+<!--          <el-icon><Edit /></el-icon>推送到商户-->
+<!--        </el-button>-->
+<!--      </el-col>-->
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
@@ -508,7 +508,7 @@ function getList() {
 }
 
 function handleAdd2() {
-  router.push('/goods/create_new')
+  router.push('/goods/create2')
 }
 
 function handleAddSku(row: any) {
