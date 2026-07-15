@@ -162,16 +162,41 @@ function loadView(view: string) {
   return () => import('@/views/error/ComponentNotFound.vue')
 }
 
-function filterAsyncRouter(routes: MenuRecord[]): any[] {
+function cleanPath(path: string): string {
+  if (!path) return ''
+  let result = path
+  while (result.includes('//')) {
+    result = result.replace('//', '/')
+  }
+  if (result.endsWith('/')) {
+    result = result.slice(0, -1)
+  }
+  return result
+}
+
+function resolveRoutePath(path: string, parentPath: string): string {
+  if (!path) return parentPath || ''
+  if (path.startsWith('/')) return cleanPath(path)
+  if (!parentPath || parentPath === '/') {
+    return cleanPath('/' + path)
+  }
+  let result = parentPath
+  if (!result.endsWith('/')) result += '/'
+  result += path
+  return cleanPath(result)
+}
+
+function filterAsyncRouter(routes: MenuRecord[], parentPath: string = ''): any[] {
   return routes
     .filter((route) => route.component || route.children?.length)
     .map((route) => {
       const r: Record<string, any> = { ...route }
+      r.path = resolveRoutePath(r.path, parentPath)
       if (r.component) {
         r.component = loadView(r.component)
       }
       if (r.children?.length) {
-        r.children = filterAsyncRouter(r.children)
+        r.children = filterAsyncRouter(r.children, r.path)
       } else {
         delete r.children
         delete r.redirect

@@ -8,18 +8,20 @@
         </template>
       </el-menu-item>
     </template>
-    <el-sub-menu v-else :index="resolvePath(item.path)" teleported>
+    <el-sub-menu v-else :index="resolvePath(item.path)">
       <template #title>
         <svg-icon v-if="item.meta?.icon" :icon-class="item.meta.icon" />
         <span>{{ item.meta?.title }}</span>
       </template>
-      <sidebar-item
-        v-for="child in item.children"
-        :key="child.path"
-        :item="child"
-        :is-nest="true"
-        :base-path="resolvePath(child.path)"
-      />
+      <template #default>
+        <sidebar-item
+          v-for="child in item.children"
+          :key="child.path"
+          :item="child"
+          :is-nest="true"
+          :base-path="resolvePath(child.path)"
+        />
+      </template>
     </el-sub-menu>
   </div>
 </template>
