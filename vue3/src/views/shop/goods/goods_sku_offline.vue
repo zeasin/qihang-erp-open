@@ -100,6 +100,8 @@ import Pagination from '@/components/Pagination/index.vue'
 import RightToolbar from '@/components/RightToolbar/index.vue'
 import ImagePreview from '@/components/ImagePreview/index.vue'
 
+const queryFormRef = ref()
+const formRef = ref()
 const loading = ref(true)
 const showSearch = ref(true)
 const total = ref(0)

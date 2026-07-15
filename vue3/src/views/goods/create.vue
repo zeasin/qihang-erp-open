@@ -1,0 +1,1 @@
+<template><div class="app-container"><el-alert title="商品管理 - 新增ERP商品（待完善）" type="warning" :closable="false" show-icon /></div></template>

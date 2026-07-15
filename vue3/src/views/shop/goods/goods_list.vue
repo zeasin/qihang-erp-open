@@ -215,6 +215,8 @@ const title = ref('')
 const isMerchant = ref(false)
 const isShop = ref(false)
 const popupRef = ref<any>(null)
+const formRef = ref<any>(null)
+const formSkuRef = ref<any>(null)
 
 const queryParams = reactive({
   pageNum: 1, pageSize: 10, productId: null as string | null,

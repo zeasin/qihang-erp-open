@@ -1,0 +1,1 @@
+<template><div class="app-container"><el-alert title="云仓发货管理（待完善）" type="warning" :closable="false" show-icon /></div></template>

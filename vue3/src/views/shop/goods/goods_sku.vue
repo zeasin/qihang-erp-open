@@ -133,6 +133,9 @@ import ImagePreview from '@/components/ImagePreview/index.vue'
 
 const props = defineProps<{ shopType?: number }>()
 
+const queryFormRef = ref()
+const formRef = ref()
+
 const loading = ref(true)
 const showSearch = ref(true)
 const total = ref(0)
