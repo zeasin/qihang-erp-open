@@ -10,6 +10,7 @@ import cn.qihangerp.model.bo.StockingOrderBo;
 import cn.qihangerp.model.bo.WarehouseManualShipOrderBo;
 import cn.qihangerp.model.vo.PushOrderToShipperResult;
 import cn.qihangerp.request.CloudWarehouseShipOrderQueryRequest;
+import cn.qihangerp.request.ShipRecordQueryRequest;
 import cn.qihangerp.request.SupplierShipOrderSearchRequest;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -108,4 +109,12 @@ public interface OOrderStockingService extends IService<OOrderStocking> {
      * @return
      */
     ResultVo<Integer> supplierShipOrderManualLogistics(SupplierShipConfirmRequest bo, String operator);
+
+    /**
+     * 统一发货记录查询（根据type区分本地仓/供应商/云仓）
+     * @param request 查询参数
+     * @param pageQuery 分页参数
+     * @return
+     */
+    PageResult<OOrderStocking> queryShipRecordPageList(ShipRecordQueryRequest request, PageQuery pageQuery);
 }

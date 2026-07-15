@@ -76,10 +76,24 @@ public class WarehouseController extends BaseController {
 	}
 
 	/**
-	 * 查询所有可用仓库（仅总部查询）
-	 */
-	@GetMapping("/my_available_list")
-	public AjaxResult myAvailableList()
+     * 查询云仓列表（用于发货云仓选择，排除本地仓 LOCAL）
+     */
+    @GetMapping("/cloud_list")
+    public TableDataInfo cloudList()
+    {
+        LambdaQueryWrapper<ErpWarehouse> qw = new LambdaQueryWrapper<ErpWarehouse>()
+                .ne(ErpWarehouse::getWarehouseType, "LOCAL")
+                .eq(ErpWarehouse::getStatus, 1)
+                .orderByDesc(ErpWarehouse::getCreateTime);
+        List<ErpWarehouse> list = warehouseService.list(qw);
+        return getDataTable(list);
+    }
+
+    /**
+     * 查询所有可用仓库（仅总部查询）
+     */
+    @GetMapping("/my_available_list")
+    public AjaxResult myAvailableList()
 	{
 	    LambdaQueryWrapper<ErpWarehouse> qw = new LambdaQueryWrapper<ErpWarehouse>()
 	            .eq(ErpWarehouse::getStatus, 1);

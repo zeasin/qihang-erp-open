@@ -134,6 +134,7 @@
 
 <script>
 import {listShop} from "@/api/shop/shop";
+import {listShipRecord} from "@/api/shipping/ship_record";
 import {MessageBox} from "element-ui";
 import {wuliuguiji} from "@/api/shipping/logistics_tracking";
 
@@ -188,6 +189,7 @@ export default {
       queryParams: {
         pageNum: 1,
         pageSize: 10,
+        type: 0,
         orderNum:null,
         waybillCode:null,
         shopId:null,

@@ -12,6 +12,7 @@ import cn.qihangerp.model.bo.StockingOrderBo;
 import cn.qihangerp.model.bo.WarehouseManualShipOrderBo;
 import cn.qihangerp.model.vo.PushOrderToShipperResult;
 import cn.qihangerp.request.CloudWarehouseShipOrderQueryRequest;
+import cn.qihangerp.request.ShipRecordQueryRequest;
 import cn.qihangerp.request.SupplierShipOrderSearchRequest;
 import cn.qihangerp.service.*;
 import cn.qihangerp.utils.DateUtils;
@@ -2260,6 +2261,91 @@ public class OOrderStockingServiceImpl extends ServiceImpl<OOrderStockingMapper,
                     supplierId, oOrder.getShopId(), e.getMessage());
             // 不影响主流程，仅记录日志
         }
+    }
+
+    /**
+     * 统一发货记录查询
+     * 根据 type 区分：0=本地仓，300=供应商，100/110/200=云仓
+     * 兼容原 querySupplierShipPageList 和 queryCloudWarehouseShipPageList 的所有查询条件
+     */
+    @Override
+    public PageResult<OOrderStocking> queryShipRecordPageList(ShipRecordQueryRequest request, PageQuery pageQuery) {
+        // 时间校验
+        if(StringUtils.hasText(request.getStartTime())){
+            boolean b = DateHelper.isValidDate(request.getStartTime());
+            if(!b) request.setStartTime("");
+        }
+        if(StringUtils.hasText(request.getEndTime())){
+            boolean b = DateHelper.isValidDate(request.getEndTime());
+            if(!b) request.setEndTime("");
+        }else if(StringUtils.hasText(request.getStartTime())){
+            request.setEndTime(request.getStartTime());
+        }
+
+        Integer type = request.getType();
+        LambdaQueryWrapper<OOrderStocking> queryWrapper = new LambdaQueryWrapper<OOrderStocking>();
+
+        // 按 type 构建基础过滤条件
+        if(type != null){
+            if(type == EnumShipType.SUPPLIER.getIndex()){
+                // 供应商发货
+                queryWrapper.eq(OOrderStocking::getType, EnumShipType.SUPPLIER.getIndex())
+                        .eq(request.getSupplierId()!=null, OOrderStocking::getShipperId, request.getSupplierId());
+            } else if(type >= EnumShipType.JD_CLOUD_WAREHOUSE.getIndex() && type <= EnumShipType.CLOUD_WAREHOUSE.getIndex()){
+                // 云仓发货（精确匹配type）
+                queryWrapper.eq(OOrderStocking::getType, type);
+            } else if(type == EnumShipType.LOCAL.getIndex()){
+                // 本地仓发货
+                queryWrapper.eq(OOrderStocking::getType, EnumShipType.LOCAL.getIndex());
+            } else {
+                // 类型不匹配，返回空结果
+                queryWrapper.eq(OOrderStocking::getId, -1L);
+            }
+        } else if(Boolean.TRUE.equals(request.getAllCloud())){
+            // type 为空但 allCloud=true：查询全部云仓发货（京东云仓/吉客云/系统云仓）
+            queryWrapper.ge(OOrderStocking::getType, 100).le(OOrderStocking::getType, 200);
+        } else {
+            // type 未指定，allCloud 也未指定：默认不限制 type
+        }
+
+        // 通用查询条件
+        queryWrapper
+                .eq(request.getShipperId()!=null && type!=null && type==EnumShipType.LOCAL.getIndex(), OOrderStocking::getShipperId, request.getShipperId())
+                .eq(request.getMerchantId()!=null, OOrderStocking::getMerchantId, request.getMerchantId())
+                .eq(request.getShopId()!=null, OOrderStocking::getShopId, request.getShopId())
+                .eq(StringUtils.hasText(request.getOrderNum()), OOrderStocking::getOrderNum, request.getOrderNum())
+                .eq(StringUtils.hasText(request.getWaybillCode()), OOrderStocking::getWaybillCode, request.getWaybillCode())
+                .eq(request.getSendStatus()!=null, OOrderStocking::getSendStatus, request.getSendStatus())
+                .eq(request.getWaybillStatus()!=null, OOrderStocking::getWaybillStatus, request.getWaybillStatus())
+                .eq(request.getShopType()!=null, OOrderStocking::getShopType, request.getShopType())
+                .eq(request.getStockingStatus()!=null, OOrderStocking::getStockingStatus, request.getStockingStatus())
+                .eq(request.getOrderStatus()!=null, OOrderStocking::getOrderStatus, request.getOrderStatus())
+                // 云仓专用条件
+                .eq(request.getErpPushStatus()!=null, OOrderStocking::getErpPushStatus, request.getErpPushStatus())
+                .eq(StringUtils.hasText(request.getShippingErpOrderCode()), OOrderStocking::getShippingErpOrderCode, request.getShippingErpOrderCode())
+                .eq(StringUtils.hasText(request.getShippingOrderCode()), OOrderStocking::getShippingOrderCode, request.getShippingOrderCode())
+                // 时间范围：本地仓/供应商用 orderTime，云仓用 createTime
+                .ge(StringUtils.hasText(request.getStartTime()) && type!=null && type==EnumShipType.SUPPLIER.getIndex(),
+                        OOrderStocking::getOrderTime, request.getStartTime()+" 00:00:00")
+                .le(StringUtils.hasText(request.getEndTime()) && type!=null && type==EnumShipType.SUPPLIER.getIndex(),
+                        OOrderStocking::getOrderTime, request.getEndTime()+" 23:59:59")
+                .ge(StringUtils.hasText(request.getStartTime()) && (type!=null && type>=100 || Boolean.TRUE.equals(request.getAllCloud())),
+                        OOrderStocking::getCreateTime, request.getStartTime()+" 00:00:00")
+                .le(StringUtils.hasText(request.getEndTime()) && (type!=null && type>=100 || Boolean.TRUE.equals(request.getAllCloud())),
+                        OOrderStocking::getCreateTime, request.getEndTime()+" 23:59:59")
+                .orderByDesc(OOrderStocking::getId);
+
+        Page<OOrderStocking> pages = shipOrderMapper.selectPage(pageQuery.build(), queryWrapper);
+
+        // 查询子订单
+        if(pages.getRecords()!=null){
+            for (OOrderStocking order:pages.getRecords()) {
+                order.setItemList(shipOrderItemService.list(new LambdaQueryWrapper<OOrderStockingItem>()
+                        .eq(OOrderStockingItem::getShipOrderId, order.getId())));
+            }
+        }
+
+        return PageResult.build(pages);
     }
 }
 
