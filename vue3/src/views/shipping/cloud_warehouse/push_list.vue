@@ -7,9 +7,9 @@
       <el-form-item label="快递单号" prop="waybillCode">
         <el-input v-model="queryParams.waybillCode" placeholder="请输入快递单号" clearable @keyup.enter="handleQuery" />
       </el-form-item>
-      <el-form-item label="供应商" prop="supplierId">
-        <el-select v-model="queryParams.supplierId" filterable placeholder="请选择供应商" clearable @change="handleQuery">
-          <el-option v-for="item in supplierList" :key="item.id" :label="item.name" :value="item.id" />
+      <el-form-item label="云仓" prop="warehouseId">
+        <el-select v-model="queryParams.warehouseId" placeholder="请选择云仓" clearable @change="handleQuery">
+          <el-option v-for="item in warehouseList" :key="item.id" :label="item.warehouseName" :value="item.id" />
         </el-select>
       </el-form-item>
       <el-form-item label="发货状态" prop="sendStatus">
@@ -33,7 +33,7 @@
         <template #default="scope">
           <el-button size="small" type="text" @click="handleDetail(scope.row)">{{ scope.row.orderNum }}</el-button>
           <el-icon class="copy-icon" @click="copyText(scope.row.orderNum)"><DocumentCopy /></el-icon><br />
-          <el-tag type="info">{{ scope.row.supplierName }}</el-tag>
+          <el-tag type="info">{{ scope.row.warehouseName }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="商品" width="450">
@@ -59,39 +59,24 @@
       <el-table-column label="物流公司" align="center" prop="logisticsCompany" width="120" />
       <el-table-column label="发货状态" align="center" prop="sendStatus" width="80">
         <template #default="scope">
-          <el-tag v-if="scope.row.sendStatus===0">待发货</el-tag>
-          <el-tag v-else-if="scope.row.sendStatus===1" type="success">已发货</el-tag>
-          <el-tag v-else-if="scope.row.sendStatus===2" type="info">部分发货</el-tag>
+          <el-tag v-if="scope.row.sendStatus===0">待处理</el-tag>
+          <el-tag v-else-if="scope.row.sendStatus===1" type="warning">处理中</el-tag>
+          <el-tag v-else-if="scope.row.sendStatus===2" type="success">已发货</el-tag>
+          <el-tag v-else-if="scope.row.sendStatus===3" type="danger">失败</el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="发货时间" align="center" prop="sendTime" width="160">
-        <template #default="scope">{{ parseTime(scope.row.sendTime) }}</template>
+      <el-table-column label="推送时间" align="center" prop="pushTime" width="160">
+        <template #default="scope">{{ parseTime(scope.row.pushTime) }}</template>
       </el-table-column>
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="100">
+      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="150">
         <template #default="scope">
-          <el-button v-if="scope.row.sendStatus===0" size="small" type="primary" plain @click="handleShip(scope.row)">发货</el-button>
+          <el-button v-if="!scope.row.waybillCode" size="small" type="text" @click="handleQueryOrder(scope.row)">查询云仓单</el-button>
+          <el-button v-if="scope.row.sendStatus===0" size="small" type="text" @click="handlePushAgain(scope.row)">重新推送</el-button>
         </template>
       </el-table-column>
     </el-table>
 
     <pagination v-show="total>0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
-
-    <el-dialog title="发货" v-model="shipOpen" width="500px" append-to-body>
-      <el-form ref="shipFormRef" :model="shipForm" :rules="shipRules" label-width="100px">
-        <el-form-item label="物流公司" prop="logisticsCompany">
-          <el-select v-model="shipForm.logisticsCompany" filterable placeholder="选择快递公司" style="width:300px">
-            <el-option v-for="item in logisticsList" :key="item.logisticsId" :label="item.logisticsName" :value="item.logisticsId" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="物流单号" prop="waybillCode">
-          <el-input v-model="shipForm.waybillCode" placeholder="请输入物流单号" style="width:300px" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button type="primary" @click="submitShip">确 定</el-button>
-        <el-button @click="shipOpen=false">取 消</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -99,9 +84,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, DocumentCopy } from '@element-plus/icons-vue'
-import { listVendorShipOrder, supplierShipConfirm } from '@/api/shipping/vendorShipping'
-import { listAllSupplier } from '@/api/goods/supplier'
-import { getFavoriteList } from '@/api/shipping/shipLogistics'
+import { listCloudWarehouseShipOrder } from '@/api/shipping/cloudWarehouseShip'
+import { listCloudWarehouse } from '@/api/wms/warehouse'
+import { pushAgainToCloudWarehouse } from '@/api/shipping/shipOrder'
+import { queryCloudWarehouseOrder } from '@/api/cloud_warehouse/index'
 import { wuliuguiji } from '@/api/shipping/logisticsTracking'
 import { parseTime } from '@/utils/zhijian'
 import Pagination from '@/components/Pagination/index.vue'
@@ -109,26 +95,19 @@ import RightToolbar from '@/components/RightToolbar/index.vue'
 import ImagePreview from '@/components/ImagePreview/index.vue'
 
 const loading=ref(true);const showSearch=ref(true);const total=ref(0)
-const dataList=ref<any[]>([]);const supplierList=ref<any[]>([]);const logisticsList=ref<any[]>([])
-const shipOpen=ref(false)
-const statusList=[{value:'',label:'全部'},{value:'0',label:'待发货'},{value:'1',label:'已发货'},{value:'2',label:'部分发货'}]
-const queryParams=reactive({pageNum:1,pageSize:10,orderNum:null as string|null,waybillCode:null as string|null,supplierId:null as number|null,sendStatus:null as string|null})
-const shipForm=reactive({id:null as number|null,logisticsCompany:null as number|null,waybillCode:null as string|null})
-const shipRules={waybillCode:[{required:true,message:'不能为空'}],logisticsCompany:[{required:true,message:'不能为空'}]}
+const dataList=ref<any[]>([]);const warehouseList=ref<any[]>([])
+const statusList=[{value:'',label:'全部'},{value:'0',label:'待处理'},{value:'1',label:'处理中'},{value:'2',label:'已发货'},{value:'3',label:'失败'}]
+const queryParams=reactive({pageNum:1,pageSize:10,orderNum:null as string|null,waybillCode:null as string|null,warehouseId:null as number|null,sendStatus:null as string|null})
 
-function getList(){loading.value=true;listVendorShipOrder(queryParams).then((res:any)=>{dataList.value=res.rows||[];total.value=res.total||0;loading.value=false}).catch(()=>{loading.value=false})}
+function getList(){loading.value=true;listCloudWarehouseShipOrder(queryParams).then((res:any)=>{dataList.value=res.rows||[];total.value=res.total||0;loading.value=false}).catch(()=>{loading.value=false})}
 function handleQuery(){queryParams.pageNum=1;getList()}
-function resetQuery(){queryParams.orderNum=null;queryParams.waybillCode=null;queryParams.supplierId=null;queryParams.sendStatus=null;handleQuery()}
+function resetQuery(){queryParams.orderNum=null;queryParams.waybillCode=null;queryParams.warehouseId=null;queryParams.sendStatus=null;handleQuery()}
 function handleDetail(row:any){ElMessage.info('订单号: '+row.orderNum)}
 function copyText(text:string){navigator.clipboard.writeText(text).then(()=>ElMessage.success('复制成功')).catch(()=>ElMessage.warning('不支持自动复制'))}
 function handleTrack(row:any){wuliuguiji({waybillCode:row.waybillCode,logisticsCompany:row.logisticsCompany}).then((res:any)=>{const info=res.data||res.rows||[];ElMessage.info(info.length>0?JSON.stringify(info.slice(0,3)):'暂无物流信息')})}
-function handleShip(row:any){shipForm.id=row.id;shipForm.logisticsCompany=null;shipForm.waybillCode=null;shipOpen.value=true}
-function submitShip(){
-  if(!shipForm.logisticsCompany||!shipForm.waybillCode){ElMessage.warning('请填写完整');return}
-  supplierShipConfirm({id:shipForm.id,logisticsCompany:shipForm.logisticsCompany,waybillCode:shipForm.waybillCode}).then((res:any)=>{
-    if(res.code===200){ElMessage.success('发货成功');shipOpen.value=false;getList()}else ElMessage.error(res.msg||'发货失败')
-  })
-}
-onMounted(()=>{listAllSupplier({}).then((res:any)=>{supplierList.value=res.rows||[]});getFavoriteList({}).then((res:any)=>{logisticsList.value=res.rows||[]});getList()})
+function handleQueryOrder(row:any){queryCloudWarehouseOrder({id:row.id}).then((res:any)=>{if(res.code===200)ElMessage.success('查询成功');else ElMessage.error(res.msg||'查询失败')})}
+function handlePushAgain(row:any){pushAgainToCloudWarehouse({id:row.id}).then((res:any)=>{if(res.code===200){ElMessage.success('重新推送成功');getList()}else ElMessage.error(res.msg||'推送失败')})}
+
+onMounted(()=>{listCloudWarehouse({}).then((res:any)=>{warehouseList.value=res.rows||[]});getList()})
 </script>
 <style scoped>.copy-icon{cursor:pointer;margin-left:4px;color:#409eff}</style>

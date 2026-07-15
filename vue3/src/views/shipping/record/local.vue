@@ -7,9 +7,16 @@
       <el-form-item label="快递单号" prop="waybillCode">
         <el-input v-model="queryParams.waybillCode" placeholder="请输入快递单号" clearable @keyup.enter="handleQuery" />
       </el-form-item>
-      <el-form-item label="供应商" prop="supplierId">
-        <el-select v-model="queryParams.supplierId" filterable placeholder="请选择供应商" clearable @change="handleQuery">
-          <el-option v-for="item in supplierList" :key="item.id" :label="item.name" :value="item.id" />
+      <el-form-item label="店铺" prop="shopId">
+        <el-select v-model="queryParams.shopId" placeholder="请选择店铺" filterable clearable @change="handleQuery">
+          <el-option v-for="item in shopList" :key="item.id" :label="item.name" :value="item.id">
+            <span style="float:left">{{ item.name }}</span>
+            <span style="float:right;color:#8492a6;font-size:13px" v-if="item.type===100">淘宝天猫</span>
+            <span style="float:right;color:#8492a6;font-size:13px" v-else-if="item.type===300">拼多多</span>
+            <span style="float:right;color:#8492a6;font-size:13px" v-else-if="item.type===400">抖店</span>
+            <span style="float:right;color:#8492a6;font-size:13px" v-else-if="item.type===200">京东POP</span>
+            <span style="float:right;color:#8492a6;font-size:13px" v-else-if="item.type===500">微信小店</span>
+          </el-option>
         </el-select>
       </el-form-item>
       <el-form-item label="发货状态" prop="sendStatus">
@@ -27,13 +34,13 @@
       <RightToolbar :showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table v-loading="loading" :data="dataList">
+    <el-table v-loading="loading" :data="shippingList">
       <el-table-column type="selection" width="55" align="center" />
       <el-table-column label="订单号" align="left" width="200">
         <template #default="scope">
           <el-button size="small" type="text" @click="handleDetail(scope.row)">{{ scope.row.orderNum }}</el-button>
           <el-icon class="copy-icon" @click="copyText(scope.row.orderNum)"><DocumentCopy /></el-icon><br />
-          <el-tag type="info">{{ scope.row.supplierName }}</el-tag>
+          <el-tag type="info">{{ shopList.find((x:any)=>x.id===scope.row.shopId)?.name || (scope.row.shopType===0?'总部销售订单':'未知平台') }}</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="商品" width="450">
@@ -44,9 +51,6 @@
               <div style="width:350px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">{{ scope.row.itemList?.[0]?.goodsName||scope.row.goodsTitle }}</div>
               <div><span style="color:#5a5e66;font-size:11px">规格：</span><el-tag size="small">{{ scope.row.itemList?.[0]?.goodsSpec }}</el-tag>&nbsp;<span>数量：<el-tag size="small">x{{ scope.row.itemList?.[0]?.quantity||scope.row.quantity }}</el-tag></span></div>
             </div>
-          </div>
-          <div v-if="scope.row.itemList?.length>1" style="padding-left:50px">
-            <el-button size="small" type="text">更多商品（{{ scope.row.itemList.length }}）</el-button>
           </div>
         </template>
       </el-table-column>
@@ -61,37 +65,14 @@
         <template #default="scope">
           <el-tag v-if="scope.row.sendStatus===0">待发货</el-tag>
           <el-tag v-else-if="scope.row.sendStatus===1" type="success">已发货</el-tag>
-          <el-tag v-else-if="scope.row.sendStatus===2" type="info">部分发货</el-tag>
         </template>
       </el-table-column>
       <el-table-column label="发货时间" align="center" prop="sendTime" width="160">
         <template #default="scope">{{ parseTime(scope.row.sendTime) }}</template>
       </el-table-column>
-      <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="100">
-        <template #default="scope">
-          <el-button v-if="scope.row.sendStatus===0" size="small" type="primary" plain @click="handleShip(scope.row)">发货</el-button>
-        </template>
-      </el-table-column>
     </el-table>
 
     <pagination v-show="total>0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
-
-    <el-dialog title="发货" v-model="shipOpen" width="500px" append-to-body>
-      <el-form ref="shipFormRef" :model="shipForm" :rules="shipRules" label-width="100px">
-        <el-form-item label="物流公司" prop="logisticsCompany">
-          <el-select v-model="shipForm.logisticsCompany" filterable placeholder="选择快递公司" style="width:300px">
-            <el-option v-for="item in logisticsList" :key="item.logisticsId" :label="item.logisticsName" :value="item.logisticsId" />
-          </el-select>
-        </el-form-item>
-        <el-form-item label="物流单号" prop="waybillCode">
-          <el-input v-model="shipForm.waybillCode" placeholder="请输入物流单号" style="width:300px" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button type="primary" @click="submitShip">确 定</el-button>
-        <el-button @click="shipOpen=false">取 消</el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
@@ -99,36 +80,23 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Search, Refresh, DocumentCopy } from '@element-plus/icons-vue'
-import { listVendorShipOrder, supplierShipConfirm } from '@/api/shipping/vendorShipping'
-import { listAllSupplier } from '@/api/goods/supplier'
-import { getFavoriteList } from '@/api/shipping/shipLogistics'
+import { listShop } from '@/api/shop/shop'
+import { listShipRecord } from '@/api/shipping/shipRecord'
 import { wuliuguiji } from '@/api/shipping/logisticsTracking'
 import { parseTime } from '@/utils/zhijian'
 import Pagination from '@/components/Pagination/index.vue'
 import RightToolbar from '@/components/RightToolbar/index.vue'
 import ImagePreview from '@/components/ImagePreview/index.vue'
 
-const loading=ref(true);const showSearch=ref(true);const total=ref(0)
-const dataList=ref<any[]>([]);const supplierList=ref<any[]>([]);const logisticsList=ref<any[]>([])
-const shipOpen=ref(false)
-const statusList=[{value:'',label:'全部'},{value:'0',label:'待发货'},{value:'1',label:'已发货'},{value:'2',label:'部分发货'}]
-const queryParams=reactive({pageNum:1,pageSize:10,orderNum:null as string|null,waybillCode:null as string|null,supplierId:null as number|null,sendStatus:null as string|null})
-const shipForm=reactive({id:null as number|null,logisticsCompany:null as number|null,waybillCode:null as string|null})
-const shipRules={waybillCode:[{required:true,message:'不能为空'}],logisticsCompany:[{required:true,message:'不能为空'}]}
-
-function getList(){loading.value=true;listVendorShipOrder(queryParams).then((res:any)=>{dataList.value=res.rows||[];total.value=res.total||0;loading.value=false}).catch(()=>{loading.value=false})}
+const loading=ref(true);const showSearch=ref(true);const total=ref(0);const shippingList=ref<any[]>([]);const shopList=ref<any[]>([])
+const statusList=[{value:'',label:'全部'},{value:'0',label:'待发货'},{value:'1',label:'已发货'}]
+const queryParams=reactive({pageNum:1,pageSize:10,orderNum:null as string|null,waybillCode:null as string|null,shopId:null as number|null,sendStatus:null as string|null,type:0})
+function getList(){loading.value=true;listShipRecord(queryParams).then((res:any)=>{shippingList.value=res.rows||[];total.value=res.total||0;loading.value=false}).catch(()=>{loading.value=false})}
 function handleQuery(){queryParams.pageNum=1;getList()}
-function resetQuery(){queryParams.orderNum=null;queryParams.waybillCode=null;queryParams.supplierId=null;queryParams.sendStatus=null;handleQuery()}
+function resetQuery(){queryParams.orderNum=null;queryParams.waybillCode=null;queryParams.shopId=null;queryParams.sendStatus=null;handleQuery()}
+function handleTrack(row:any){wuliuguiji({waybillCode:row.waybillCode,logisticsCompany:row.logisticsCompany}).then((res:any)=>{const info=res.data||res.rows||[];ElMessage.info(info.length>0?JSON.stringify(info.slice(0,3)):'暂无物流信息')})}
 function handleDetail(row:any){ElMessage.info('订单号: '+row.orderNum)}
 function copyText(text:string){navigator.clipboard.writeText(text).then(()=>ElMessage.success('复制成功')).catch(()=>ElMessage.warning('不支持自动复制'))}
-function handleTrack(row:any){wuliuguiji({waybillCode:row.waybillCode,logisticsCompany:row.logisticsCompany}).then((res:any)=>{const info=res.data||res.rows||[];ElMessage.info(info.length>0?JSON.stringify(info.slice(0,3)):'暂无物流信息')})}
-function handleShip(row:any){shipForm.id=row.id;shipForm.logisticsCompany=null;shipForm.waybillCode=null;shipOpen.value=true}
-function submitShip(){
-  if(!shipForm.logisticsCompany||!shipForm.waybillCode){ElMessage.warning('请填写完整');return}
-  supplierShipConfirm({id:shipForm.id,logisticsCompany:shipForm.logisticsCompany,waybillCode:shipForm.waybillCode}).then((res:any)=>{
-    if(res.code===200){ElMessage.success('发货成功');shipOpen.value=false;getList()}else ElMessage.error(res.msg||'发货失败')
-  })
-}
-onMounted(()=>{listAllSupplier({}).then((res:any)=>{supplierList.value=res.rows||[]});getFavoriteList({}).then((res:any)=>{logisticsList.value=res.rows||[]});getList()})
+onMounted(()=>{listShop({}).then((res:any)=>{shopList.value=res.rows||[]});getList()})
 </script>
 <style scoped>.copy-icon{cursor:pointer;margin-left:4px;color:#409eff}</style>
