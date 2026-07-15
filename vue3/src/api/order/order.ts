@@ -31,6 +31,15 @@ export function updateShipSupplierId(data: Record<string, any>) {
   return request({ url: '/api/erp-api/order/updateShipSupplierId', method: 'post', data })
 }
 
+// 库存查询
+export function getWarehouseGoodsStockList(query?: Record<string, any>) {
+  return request({ url: '/api/erp-api/goodsInventory/list', method: 'get', params: query })
+}
+
+export function getGoodsStockBatch(stockId: number | string) {
+  return request({ url: '/api/erp-api/goodsInventory/' + stockId, method: 'get' })
+}
+
 // 供应商库存相关
 export function listCloudStockInventory(query?: Record<string, any>) {
   return request({ url: '/api/erp-api/vendor_stock/inventory_list', method: 'get', params: query })
