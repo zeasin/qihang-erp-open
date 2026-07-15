@@ -30,3 +30,20 @@ export function updateErpSkuId(data: Record<string, any>) {
 export function updateShipSupplierId(data: Record<string, any>) {
   return request({ url: '/api/erp-api/order/updateShipSupplierId', method: 'post', data })
 }
+
+// 供应商库存相关
+export function listCloudStockInventory(query?: Record<string, any>) {
+  return request({ url: '/api/erp-api/vendor_stock/inventory_list', method: 'get', params: query })
+}
+
+export function listCloudStockIn(query?: Record<string, any>) {
+  return request({ url: '/api/erp-api/vendor_stock/stock_in_list', method: 'get', params: query })
+}
+
+export function getCloudStockIn(id: number | string) {
+  return request({ url: '/api/erp-api/vendor_stock/stock_in_detail/' + id, method: 'get' })
+}
+
+export function listStoredGoodsSku(query?: Record<string, any>) {
+  return request({ url: '/api/erp-api/vendor_stock/stored_goods_sku_list', method: 'get', params: query })
+}

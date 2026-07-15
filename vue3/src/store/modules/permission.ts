@@ -96,6 +96,7 @@ const viewsMap: Record<string, () => Promise<any>> = {
   // report
   'report/goods/index': () => import('@/views/report/goods/index.vue'),
   'report/shop/index': () => import('@/views/report/shop/index.vue'),
+  'report/stock/index': () => import('@/views/report/stock/index.vue'),
 
   // shipping
   'shipping/index': () => import('@/views/shipping/index.vue'),
@@ -126,8 +127,10 @@ const viewsMap: Record<string, () => Promise<any>> = {
   'wms/warehouse/index': () => import('@/views/wms/warehouse/index.vue'),
   'wms/warehouse/position': () => import('@/views/wms/warehouse/position.vue'),
   'wms/goods/index': () => import('@/views/wms/goods/index.vue'),
+  'wms/goods/stored_goods_sku': () => import('@/views/wms/goods/stored_goods_sku.vue'),
   'wms/stockIn/index': () => import('@/views/wms/stockIn/index.vue'),
   'wms/stockOut/index': () => import('@/views/wms/stockOut/index.vue'),
+  'wms/stock_alert/index': () => import('@/views/wms/stock_alert/index.vue'),
 }
 
 function loadView(view: string) {
