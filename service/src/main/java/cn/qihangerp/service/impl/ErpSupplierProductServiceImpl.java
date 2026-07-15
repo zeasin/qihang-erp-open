@@ -5,6 +5,7 @@ import cn.qihangerp.common.PageResult;
 import cn.qihangerp.common.ResultVo;
 import cn.qihangerp.enums.EnumWarehouseType;
 import cn.qihangerp.model.bo.SupplierProductAddBo;
+import cn.qihangerp.model.bo.SupplierGoodsLinkBo;
 import cn.qihangerp.model.entity.ErpSupplierProduct;
 import cn.qihangerp.model.entity.ErpSupplierProductItem;
 import cn.qihangerp.model.entity.ErpWarehouse;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -383,5 +385,75 @@ public class ErpSupplierProductServiceImpl extends ServiceImpl<ErpSupplierProduc
         }
         product.setStatus(status);
         this.updateById(product);
+    }    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public ResultVo linkGoodsFromLibrary(String username, SupplierGoodsLinkBo bo) {
+        if (bo.getSupplierId() == null) {
+            return ResultVo.error(500, "供应商ID不能为空");
+        }
+        if (bo.getGoodsId() == null) {
+            return ResultVo.error(500, "商品库SPU ID不能为空");
+        }
+        if (bo.getSkus() == null || bo.getSkus().isEmpty()) {
+            return ResultVo.error(500, "请至少选择一个SKU");
+        }
+
+        // 查找是否已有此供应商的商品（根据商品库SPU匹配）
+        LambdaQueryWrapper<ErpSupplierProduct> productQuery = new LambdaQueryWrapper<>();
+        productQuery.eq(ErpSupplierProduct::getSupplierId, bo.getSupplierId());
+        productQuery.eq(ErpSupplierProduct::getErpGoodsId, bo.getGoodsId());
+        ErpSupplierProduct product = this.getOne(productQuery);
+
+        if (product == null) {
+            // 创建新的供应商SPU
+            product = new ErpSupplierProduct();
+            product.setSupplierId(bo.getSupplierId());
+            product.setProductName(""); // 自动填充
+            product.setErpGoodsId(bo.getGoodsId());
+            product.setStatus(1);
+            product.setCreateBy(username);
+            product.setCreateTime(LocalDateTime.now());
+            this.save(product);
+        }
+
+        final Long supplierProductId = product.getId();
+
+        // 处理每个SKU
+        for (SupplierGoodsLinkBo.SkuItem skuItem : bo.getSkus()) {
+            if (skuItem.getSkuId() == null) continue;
+
+            // 查找是否已有此SKU记录
+            LambdaQueryWrapper<ErpSupplierProductItem> itemQuery = new LambdaQueryWrapper<>();
+            itemQuery.eq(ErpSupplierProductItem::getSupplierProductId, supplierProductId);
+            itemQuery.eq(ErpSupplierProductItem::getErpGoodsSkuId, skuItem.getSkuId());
+            ErpSupplierProductItem existingItem = itemMapper.selectOne(itemQuery);
+
+            if (existingItem != null) {
+                // 更新价格
+                if (skuItem.getPrice() != null) {
+                    existingItem.setPrice(skuItem.getPrice());
+                }
+                existingItem.setUpdateBy(username);
+                existingItem.setUpdateTime(LocalDateTime.now());
+                itemMapper.updateById(existingItem);
+            } else {
+                // 新增SKU记录，自动关联商品库
+                ErpSupplierProductItem newItem = new ErpSupplierProductItem();
+                newItem.setSupplierProductId(supplierProductId);
+                newItem.setSupplierId(bo.getSupplierId());
+                newItem.setSkuCode(skuItem.getSkuCode());
+                newItem.setProductName(skuItem.getSkuName());
+                newItem.setPrice(skuItem.getPrice() != null ? skuItem.getPrice() : BigDecimal.ZERO);
+                newItem.setErpGoodsId(bo.getGoodsId());
+                newItem.setErpGoodsSkuId(skuItem.getSkuId());
+                newItem.setStatus(1);
+                newItem.setCreateBy(username);
+                newItem.setCreateTime(LocalDateTime.now());
+                itemMapper.insert(newItem);
+            }
+        }
+
+        return ResultVo.success();
     }
+
 }

@@ -45,3 +45,11 @@ export function updateGoodsStatus(data: Record<string, any>) {
     data
   })
 }
+
+/**
+ * 从商品库关联商品到供应商
+ * @param data {supplierId, goodsId, skus:[{skuId, price, skuCode, skuName}]}
+ */
+export function linkGoodsFromLibrary(data: Record<string, any>) {
+  return request({ url: '/api/erp-api/supplier/goods/link', method: 'post', data })
+}

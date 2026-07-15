@@ -128,7 +128,7 @@
 </template>
 
 <script>
-import { listGoods, getGoodsItem, addGoodsItem, delGoodsSpec, updateGoodsStatus } from "@/api/goods/supplier_goods";
+import { listGoods, getGoodsItem, addGoodsItem, delGoodsSpec, updateGoodsStatus, linkGoodsFromLibrary } from "@/api/goods/supplier_goods";
 import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 import { listCategory } from "@/api/goods/category";
@@ -202,8 +202,11 @@ export default {
     submitSelect() {
       if (!this.selectSupplierId) { this.$message.warning('请选择供应商'); return; }
       if (this.selectedSkus.length === 0) { this.$message.warning('请选择SKU'); return; }
-      const items = this.selectedSkus.map(s => ({erpSkuId: s.skuId||s.id, skuCode: s.skuCode, skuName: s.skuName, price: s.supplierPrice||0}));
-      addGoodsItem({supplierId: this.selectSupplierId, items}).then(r => {
+      linkGoodsFromLibrary({
+        supplierId: this.selectSupplierId,
+        goodsId: this.selectedSpu.id,
+        skus: this.selectedSkus.map(s => ({skuId: s.skuId||s.id, price: s.supplierPrice||0, skuCode: s.skuCode, skuName: s.skuName}))
+      }).then(r => {
         if (r.code === 200) { this.$message.success('添加成功'); this.step2Open = false; this.getList(); }
         else { this.$message.error(r.msg || '添加失败'); }
       });

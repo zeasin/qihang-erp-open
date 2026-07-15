@@ -4,6 +4,7 @@ import cn.qihangerp.common.PageQuery;
 import cn.qihangerp.common.PageResult;
 import cn.qihangerp.common.ResultVo;
 import cn.qihangerp.model.bo.SupplierProductAddBo;
+import cn.qihangerp.model.bo.SupplierGoodsLinkBo;
 import cn.qihangerp.model.entity.ErpSupplierProduct;
 import cn.qihangerp.model.entity.ErpSupplierProductItem;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -54,4 +55,12 @@ public interface ErpSupplierProductService extends IService<ErpSupplierProduct> 
      * @param status 状态
      */
     void updateStatus(Long id, Integer status);
+
+    /**
+     * 从商品库关联商品到供应商
+     * @param username 操作人
+     * @param bo 关联参数（供应商ID + 商品库SPUID + SKU列表）
+     * @return 操作结果
+     */
+    ResultVo linkGoodsFromLibrary(String username, SupplierGoodsLinkBo bo);
 }

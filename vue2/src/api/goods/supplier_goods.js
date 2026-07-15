@@ -26,6 +26,14 @@ export function addGoodsItem(data) {
   })
 }
 
+export function linkGoodsFromLibrary(data) {
+  return request({
+    url: '/api/erp-api/supplier/goods/link',
+    method: 'post',
+    data: data
+  })
+}
+
 // 修改供应商商品（含SKU）
 export function updateGoodsItem(data) {
   return request({

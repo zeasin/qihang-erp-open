@@ -4,6 +4,7 @@ import cn.qihangerp.common.AjaxResult;
 import cn.qihangerp.common.PageQuery;
 import cn.qihangerp.common.TableDataInfo;
 import cn.qihangerp.model.bo.SupplierProductAddBo;
+import cn.qihangerp.model.bo.SupplierGoodsLinkBo;
 import cn.qihangerp.model.entity.ErpSupplierProduct;
 import cn.qihangerp.security.common.BaseController;
 import cn.qihangerp.service.ErpSupplierProductService;
@@ -76,5 +77,16 @@ public class SupplierGoodsController extends BaseController {
     public AjaxResult updateStatus(@RequestBody ErpSupplierProduct bo) {
         supplierProductService.updateStatus(bo.getId(), bo.getStatus());
         return success();
+    }
+
+    /**
+     * 从商品库关联商品到供应商
+     * 支持批量添加SKU，已存在的SKU自动更新价格
+     * @param bo {supplierId, goodsId, skus:[{skuId, price, skuCode, skuName}]}
+     */
+    @PostMapping("/link")
+    public AjaxResult linkGoods(@RequestBody SupplierGoodsLinkBo bo) {
+        var result = supplierProductService.linkGoodsFromLibrary(getUsername(), bo);
+        return result.getCode() == 200 ? success() : error(result.getMsg());
     }
 }

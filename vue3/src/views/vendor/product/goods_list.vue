@@ -130,7 +130,7 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, ArrowUp, Delete } from '@element-plus/icons-vue'
-import { listGoods, getGoodsItem, addGoodsItem, delGoodsSpec, updateGoodsStatus } from '@/api/goods/supplierGoods'
+import { listGoods, getGoodsItem, addGoodsItem, delGoodsSpec, updateGoodsStatus, linkGoodsFromLibrary } from '@/api/goods/supplierGoods'
 import { listCategory } from '@/api/goods/category'
 import { listSupplier } from '@/api/goods/supplier'
 import { listGoods as listErpGoods } from '@/api/goods/goods'
@@ -196,8 +196,11 @@ function handleSkuSelect(selection:any[]){selectedSkus.value=selection}
 function submitSelect(){
   if(!selectSupplierId.value){ElMessage.warning('请选择供应商');return}
   if(selectedSkus.value.length===0){ElMessage.warning('请选择SKU');return}
-  const items=selectedSkus.value.map((s:any)=>({erpSkuId:s.skuId||s.id,skuCode:s.skuCode,skuName:s.skuName,price:s.supplierPrice||0}))
-  addGoodsItem({supplierId:selectSupplierId.value,items}).then((res:any)=>{
+  linkGoodsFromLibrary({
+    supplierId:selectSupplierId.value,
+    goodsId:selectedSpu.value.id,
+    skus:selectedSkus.value.map((s:any)=>({skuId:s.skuId||s.id,price:s.supplierPrice||0,skuCode:s.skuCode,skuName:s.skuName}))
+  }).then((res:any)=>{
     if(res.code===200){ElMessage.success('添加成功，已关联商品库');step2Open.value=false;getList()}
     else ElMessage.error(res.msg||'添加失败')
   })
