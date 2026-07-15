@@ -26,20 +26,58 @@ public class OGoodsCategoryServiceImpl extends ServiceImpl<OGoodsCategoryMapper,
     private final OGoodsCategoryMapper oGoodsCategoryMapper;
     private final OGoodsCategoryAttributeMapper attributeMapper;
     private final OGoodsCategoryAttributeValueMapper attributeValueMapper;
+
+    /**
+     * 统一字段补齐 + 超长安全截断
+     * @param category 分类实体
+     * @param isUpdate 是否为更新操作
+     */
+    private void fillRequiredFields(OGoodsCategory category, boolean isUpdate) {
+        // 1. NOT NULL 字段兜底（避免500）
+        if (category.getMerchantId() == null) {
+            category.setMerchantId(0L); // 默认0=总部系统
+        }
+        if (category.getParentId() == null) {
+            category.setParentId(0L); // 默认0=一级分类
+        }
+        if (category.getSort() == null) {
+            category.setSort(0);
+        }
+        if (category.getIsdelete() == null) {
+            category.setIsdelete(0);
+        }
+        if (category.getPath() == null) {
+            category.setPath("");
+        }
+        // 2. 长度严格截断（按用户要求：编码18/名称20/备注50）
+        if (category.getNumber() != null && category.getNumber().length() > 18) {
+            category.setNumber(category.getNumber().substring(0, 18));
+        }
+        if (category.getName() != null && category.getName().length() > 20) {
+            category.setName(category.getName().substring(0, 20));
+        }
+        if (category.getRemark() != null && category.getRemark().length() > 50) {
+            category.setRemark(category.getRemark().substring(0, 50));
+        }
+        if (category.getPath() != null && category.getPath().length() > 500) {
+            category.setPath(category.getPath().substring(0, 500));
+        }
+        // 3. 时间戳
+        LocalDateTime now = LocalDateTime.now();
+        if (!isUpdate) {
+            category.setCreateTime(now);
+        }
+        category.setUpdateTime(now);
+    }
+
     @Transactional
     @Override
     public void addCategory(OGoodsCategory category) {
+        // 统一补齐字段 + 长度截断（防止500 + 防止超长入库失败）
+        fillRequiredFields(category, false);
         // 添加分类
-        if(category.getSort()==null){
-            category.setSort(0);
-        }
-        if(category.getParentId()==null){
-            category.setParentId(0L);
-        }
-        category.setCreateTime(LocalDateTime.now());
-        category.setIsdelete(0);
         oGoodsCategoryMapper.insert(category);
-        // 如果是已经分类，添加默认规格
+        // 如果是一级分类，添加默认规格
         if(category.getParentId()==0) {
             // 添加颜色规格
             OGoodsCategoryAttribute att1 = new OGoodsCategoryAttribute();
@@ -56,11 +94,16 @@ public class OGoodsCategoryServiceImpl extends ServiceImpl<OGoodsCategoryMapper,
             av1.setOrdernum(0);
             av1.setIsdelete(0);
             attributeValueMapper.insert(av1);
-
         }
     }
+
+    /**
+     * 重写MyBatis-Plus的updateById，确保统一字段补齐+长度截断
+     */
+    @Transactional
+    @Override
+    public boolean updateById(OGoodsCategory category) {
+        fillRequiredFields(category, true);
+        return super.updateById(category);
+    }
 }
-
-
-
-

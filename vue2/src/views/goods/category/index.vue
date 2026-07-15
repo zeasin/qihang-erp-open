@@ -6,6 +6,7 @@
           v-model="queryParams.number"
           placeholder="请输入分类编码"
           clearable
+          maxlength="18"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
@@ -14,6 +15,7 @@
           v-model="queryParams.name"
           placeholder="请输入分类名称"
           clearable
+          maxlength="20"
           @keyup.enter.native="handleQuery"
         />
       </el-form-item>
@@ -154,13 +156,13 @@
 <!--          </el-select> &ndash;&gt;-->
 <!--        </el-form-item>-->
         <el-form-item label="分类编码" prop="number">
-          <el-input v-model="form.number" placeholder="请输入分类编码" />
+          <el-input v-model="form.number" placeholder="请输入分类编码" maxlength="18" show-word-limit />
         </el-form-item>
         <el-form-item label="分类名称" prop="name">
-          <el-input v-model="form.name" placeholder="请输入分类名称" />
+          <el-input v-model="form.name" placeholder="请输入分类名称" maxlength="20" show-word-limit />
         </el-form-item>
         <el-form-item label="备注" prop="remark">
-          <el-input v-model="form.remark" type="textarea" placeholder="请输入备注" />
+          <el-input v-model="form.remark" type="textarea" placeholder="请输入备注" maxlength="50" show-word-limit />
         </el-form-item>
         <el-form-item label="排序值" prop="sort">
           <el-input v-model.number="form.sort" placeholder="请输入排序值" />
@@ -221,8 +223,17 @@ export default {
       },
       // 表单校验
       rules: {
-        number: [{ required: true, message: "不能为空", trigger: "blur" }],
-        name: [{ required: true, message: "不能为空", trigger: "blur" }],
+        number: [
+          { required: true, message: "分类编码不能为空", trigger: "blur" },
+          { max: 18, message: "分类编码长度不能超过 18 个字符", trigger: "blur" }
+        ],
+        name: [
+          { required: true, message: "分类名称不能为空", trigger: "blur" },
+          { max: 20, message: "分类名称长度不能超过 20 个字符", trigger: "blur" }
+        ],
+        remark: [
+          { max: 50, message: "备注长度不能超过 50 个字符", trigger: "blur" }
+        ],
       }
     };
   },
@@ -325,6 +336,10 @@ export default {
     submitForm() {
       this.$refs["form"].validate(valid => {
         if (valid) {
+          // 前端兜底：超长安全截断（严格按数据库列长度）
+          if (this.form.number && this.form.number.length > 18) this.form.number = this.form.number.substring(0, 18);
+          if (this.form.name && this.form.name.length > 20) this.form.name = this.form.name.substring(0, 20);
+          if (this.form.remark && this.form.remark.length > 50) this.form.remark = this.form.remark.substring(0, 50);
           if (this.form.id != null) {
             updateCategory(this.form).then(response => {
               this.$modal.msgSuccess("修改成功");

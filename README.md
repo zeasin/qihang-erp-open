@@ -374,8 +374,8 @@ graph TD
 > v4.1 版本已重构为**单体应用**，无需分布式组件，启动更简单。
 
 #### 3.2、导入数据库
-+ 创建数据库`qihangerp`
-+ 导入数据库结构：sql脚本`docs\qihangerp.sql`
++ 创建数据库`qihang-erp`
++ 导入数据库结构：sql脚本`docs\qihang-erp.sql`
 
 #### 3.3、启动后端服务
 ```bash
@@ -393,7 +393,7 @@ java -jar erp-api/target/erp-api.jar
 + 运行`npm run dev`
 + 浏览网页（默认端口 88，也可通过环境变量 `port=1024` 指定）
 + 登录账号：`admin`
-+ 登录密码：`admin123`
++ 登录密码：`QHerp@23`
 
 #### 3.5、SSE 实时消息推送
 系统支持 SSE（Server-Sent Events）实时推送新订单等通知。
@@ -461,21 +461,19 @@ location /prod-api/ {
 
 ## 📦 启航电商开源生态
 
-启航电商旗下开源项目矩阵，所有项目共同指向统一商业版：
+启航电商旗下开源项目矩阵：
 
 | 项目 | 定位                            | Gitee | GitHub |
 |:----|:------------------------------|:-----|:-------|
 | **启航电商ERP ⬅** | **电商业务AI底座（单体应用，v4.1）**             | [Gitee](https://gitee.com/qiliping/qihang-erp-open) | [GitHub](https://github.com/zeasin/qihang-erp-open) |
 | [OMS 订单中台](https://gitee.com/qiliping/qihang-oms) | 轻量级订单管理                       | [Gitee](https://gitee.com/qiliping/qihang-oms) | [GitHub](https://github.com/zeasin/qihang-ecom-oms) |
 | [跨境云仓WMS](https://gitee.com/qiliping/qihang-cloud-wms)     | 专为跨境云仓服务商打造 > 智能仓配，高效管理，一键无忧。 | [Gitee](https://gitee.com/qiliping/qihang-cloud-wms) | [GitHub](https://github.com/zeasin/qihang-cloud-wms) |
-| [跨境ERP](https://gitee.com/qiliping/qihang-cb-erp) | 跨境电商                          | [Gitee](https://gitee.com/qiliping/qihang-cb-erp) | [GitHub](https://github.com/zeasin/qihang-cb-erp) |
-| [SCM 供应链](https://gitee.com/qiliping/qihangerp-scm) | 多商户多供应商系统（已合并到商业版）            | [Gitee](https://gitee.com/qiliping/qihangerp-scm) | [GitHub](https://github.com/zeasin/qihangerp-scm) |
 
 ## 💼 商业版
 
-👉 **[启航电商ERP商业版功能预览](https://gitee.com/qiliping/qihangerp-docs)**
+👉 **[启航电商ERP商业版](https://qihangerp.cn)**
 
-👉 **了解更多？→** 电话/微信：15818590119
+👉 **了解更多？→** 邮箱：qihangerp@qq.com
 
 
 

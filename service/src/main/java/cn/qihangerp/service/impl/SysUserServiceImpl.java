@@ -177,6 +177,14 @@ public class SysUserServiceImpl implements ISysUserService
     @Transactional
     public int insertUser(SysUser user)
     {
+        // 兜底：用户类型默认 "00"（系统用户），修复 Field 'user_type' doesn't have a default value）
+        if (user.getUserType() == null || user.getUserType().isEmpty()) {
+            user.setUserType("00");
+        }
+        // 兜底：部门ID默认值 0（前端不再展示部门选择器，统一使用0）
+        if (user.getDeptId() == null) {
+            user.setDeptId(0L);
+        }
         // 新增用户信息
         int rows = userMapper.insertUser(user);
 //        // 新增用户岗位关联
@@ -192,9 +200,16 @@ public class SysUserServiceImpl implements ISysUserService
      * @param user 用户信息
      * @return 结果
      */
-    @Override
     public boolean registerUser(SysUser user)
     {
+        // 兜底：用户类型默认 "00"（系统用户）
+        if (user.getUserType() == null || user.getUserType().isEmpty()) {
+            user.setUserType("00");
+        }
+        // 兜底：部门ID默认值 0
+        if (user.getDeptId() == null) {
+            user.setDeptId(0L);
+        }
         return userMapper.insertUser(user) > 0;
     }
 

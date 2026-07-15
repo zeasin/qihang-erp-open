@@ -88,31 +88,14 @@ service.interceptors.response.use(res => {
       });
     }
       return Promise.reject('无效的会话，或者会话已过期，请重新登录。')
-    }
-    // else if (code > 1000) {
-      // if (!isRelogin.show) {
-      //   isRelogin.show = true;
-      //   MessageBox.confirm('Token已过期，需要重新授权', '系统提示', { confirmButtonText: '重新授权', cancelButtonText: '取消', type: 'warning' }).then(() => {
-      //     isRelogin.show = false;
-      //     // store.dispatch('LogOut').then(() => {
-      //       location.href = 'http://taobao.com';/taoapi2/tao_oauth
-      //     // })
-      //   }).catch(() => {
-      //     isRelogin.show = false;
-      //   });
-      // }
-      // return Promise.reject('无效的会话，或者会话已过期，请重新登录。')
-    //   return res.data
-    // }
-    else if (code === 500) {
+    } else if (code === 500) {
       Message({ message: msg, type: 'error' })
       return Promise.reject(new Error(msg))
-    } else if (code > 1001) {
-      return res.data
     } else if (code === 601) {
       Message({ message: msg, type: 'warning' })
       return Promise.reject('error')
     } else if (code !== 200) {
+      // 所有非200（包括 2001/2000/400/3000等）都走错误提示 + Promise.reject
       Notification.error({ title: msg })
       return Promise.reject('error')
     } else {
