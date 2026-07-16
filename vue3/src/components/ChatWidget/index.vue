@@ -20,7 +20,9 @@
           </div>
           <div v-if="streamingText !== null" class="message assistant">
             <div class="message-bubble streaming">
-              {{ filterContent(streamingText) }}<span class="cursor" />
+              <template v-if="streamingText">{{ filterContent(streamingText) }}</template>
+              <template v-else><span class="thinking-text">思考中</span></template>
+              <span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>
             </div>
           </div>
         </div>
@@ -285,18 +287,30 @@ function scrollToBottom() {
   word-break: break-word;
 }
 
-.streaming .cursor {
-  display: inline-block;
-  width: 2px;
-  height: 16px;
-  background: #409eff;
-  margin-left: 2px;
-  animation: blink 1s step-end infinite;
-  vertical-align: middle;
+.thinking-text {
+  color: #999;
 }
 
-@keyframes blink {
-  50% { opacity: 0; }
+.streaming .loading-dots span {
+  animation: dot-blink 1.4s infinite;
+  font-weight: bold;
+  font-size: 18px;
+  line-height: 1;
+  color: #409eff;
+}
+
+.streaming .loading-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.streaming .loading-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes dot-blink {
+  0%, 20% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
 }
 
 .chat-input {
