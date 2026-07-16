@@ -82,3 +82,11 @@ export function updateGoodsStatus(data) {
     data: data
   })
 }
+
+export function saveSupplierPrice(data) {
+  return request({
+    url: '/api/erp-api/supplier/price/savePrice',
+    method: 'post',
+    data: data
+  })
+}

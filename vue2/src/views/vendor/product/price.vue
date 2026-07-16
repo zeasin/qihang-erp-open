@@ -16,7 +16,7 @@
     </el-form>
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
-        <el-button type="primary" plain icon="el-icon-plus" size="mini" @click="handleAddPrice">添加报价</el-button>
+        <el-button type="primary" plain icon="el-icon-plus" size="mini" @click="handleAddPrice">设置供应商报价</el-button>
       </el-col>
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList" />
     </el-row>
@@ -34,70 +34,48 @@
       <el-table-column label="报价时间" align="center" prop="createTime" width="160">
         <template slot-scope="scope">{{ parseTime(scope.row.createTime) }}</template>
       </el-table-column>
-      <el-table-column label="备注" align="center" prop="remark" min-width="150" show-overflow-tooltip />
     </el-table>
     <pagination v-show="total>0" :total="total" :page.sync="queryParams.pageNum" :limit.sync="queryParams.pageSize" @pagination="getList" />
 
-    <el-dialog title="添加报价" :visible.sync="addOpen" width="900px" append-to-body>
-      <el-form :inline="true" size="small" label-width="80px">
+    <el-dialog title="设置供应商报价" :visible.sync="priceOpen" width="900px" append-to-body>
+      <el-form :inline="true" size="small" label-width="80px" style="margin-bottom:15px">
         <el-form-item label="供应商">
-          <el-select v-model="addSupplierId" placeholder="请选择供应商" filterable style="width:200px">
+          <el-select v-model="priceSupplierId" placeholder="请选择供应商" filterable style="width:200px" @change="loadSupplierSkus">
             <el-option v-for="item in supplierList" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
-        <el-form-item label="商品">
-          <el-input v-model="addKeyword" placeholder="搜索商品名称" clearable style="width:200px" @keyup.enter.native="loadGoods" />
-        </el-form-item>
-        <el-form-item>
-          <el-button type="primary" size="small" icon="el-icon-search" @click="loadGoods">搜索</el-button>
-        </el-form-item>
       </el-form>
-      <el-table v-loading="goodsLoading" :data="goodsList" highlight-current-row>
-        <el-table-column label="图片" width="60"><template slot-scope="scope"><el-image style="width:40px;height:40px" :src="scope.row.image" /></template></el-table-column>
-        <el-table-column label="商品名称" align="left" prop="name" min-width="200" />
-        <el-table-column label="编号" align="center" prop="goodsNum" width="150" />
-        <el-table-column label="操作" align="center" width="100">
-          <template slot-scope="scope">
-            <el-button type="primary" size="small" @click="selectGoods(scope.row)">选择</el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-    </el-dialog>
-
-    <el-dialog title="设置SKU报价" :visible.sync="priceOpen" width="800px" append-to-body>
-      <el-alert title="选中商品" type="info" :closable="false" show-icon style="margin-bottom:15px">
-        <template slot="title">商品：{{ selectedGoods?.name }}（编号：{{ selectedGoods?.goodsNum }}）</template>
-      </el-alert>
-      <el-table :data="skuPriceList">
+      <el-alert v-if="!priceSupplierId" title="请先选择供应商" type="info" :closable="false" show-icon />
+      <el-table v-loading="skuLoading" :data="supplierSkuList" v-if="priceSupplierId">
+        <el-table-column label="商品名称" align="left" prop="productName" min-width="180" />
         <el-table-column label="SKU编码" align="center" prop="skuCode" width="150" />
-        <el-table-column label="规格" align="center" prop="skuName" width="150" />
-        <el-table-column label="零售价" align="center" width="100">
-          <template slot-scope="scope">{{ amountFormatter(null,null,scope.row.retailPrice,null) }}</template>
+        <el-table-column label="规格" align="center" prop="standard" width="120" />
+        <el-table-column label="商品库SkuId" align="center" prop="erpGoodsSkuId" width="100" />
+        <el-table-column label="当前最新价" align="center" prop="price" width="100">
+          <template slot-scope="scope">{{ amountFormatter(null,null,scope.row.price,null) }}</template>
         </el-table-column>
-        <el-table-column label="供应商报价" width="180">
+        <el-table-column label="新报价" width="160">
           <template slot-scope="scope">
-            <el-input-number v-model="scope.row.price" :min="0" :precision="2" controls-position="right" size="small" style="width:140px" />
+            <el-input-number v-model="scope.row.newPrice" :min="0" :precision="2" controls-position="right" size="small" style="width:130px" />
           </template>
         </el-table-column>
       </el-table>
       <div slot="footer" class="dialog-footer">
-        <el-button @click="priceOpen=false;addOpen=true">上一步</el-button>
-        <el-button type="primary" @click="submitPrices">确认提交报价</el-button>
+        <el-button type="primary" :disabled="!priceSupplierId" @click="submitSupplierPrices">保存报价</el-button>
+        <el-button @click="priceOpen=false">取 消</el-button>
       </div>
     </el-dialog>
   </div>
 </template>
 <script>
-import { listSupplierPrice, linkGoodsFromLibrary } from "@/api/goods/supplier_goods";
+import { listSupplierPrice, listSupplierSku, saveSupplierPrice } from "@/api/goods/supplier_goods";
 import { listSupplier } from "@/api/goods/supplier";
-import { listGoods, searchSku } from "@/api/goods/goods";
 export default {
   data() {
     return {
       loading: true, showSearch: true, total: 0, priceList: [], supplierList: [],
       queryParams: { pageNum: 1, pageSize: 10, skuCode: null, supplierId: null },
-      addOpen: false, priceOpen: false, goodsLoading: false,
-      addSupplierId: null, addKeyword: '', goodsList: [], selectedGoods: null, skuPriceList: [],
+      priceOpen: false, skuLoading: false, priceSupplierId: null, supplierSkuList: [],
     };
   },
   created() { listSupplier({ pageSize: 100 }).then(r => { this.supplierList = r.rows || []; }); this.getList(); },
@@ -106,23 +84,22 @@ export default {
     handleQuery() { this.queryParams.pageNum = 1; this.getList(); },
     resetQuery() { this.resetForm("queryForm"); this.handleQuery(); },
     amountFormatter(r, c, v, i) { if(!v)return'';return'¥'+parseFloat(v).toFixed(2).replace(/\d(?=(\d{3})+\.)/g,'$&,'); },
-    handleAddPrice() { this.addSupplierId = null; this.addKeyword = ''; this.selectedGoods = null; this.skuPriceList = []; this.addOpen = true; this.loadGoods(); },
-    loadGoods() { this.goodsLoading = true; listGoods({pageSize:20,name:this.addKeyword||undefined}).then(r => { this.goodsList = r.rows||[]; this.goodsLoading = false; }); },
-    selectGoods(row) { if(!this.addSupplierId){this.$message.warning('请先选择供应商');return}
-      this.selectedGoods = row;
-      searchSku({goodsId:row.id,supplierId:this.addSupplierId,pageSize:200}).then(r=>{
-        this.skuPriceList = (r.rows||[]).map(s=>({...s,price:s.supplierPrice||s.purPrice||0}));
-        this.addOpen = false; this.priceOpen = true;
-      });
+    handleAddPrice() { this.priceSupplierId = null; this.supplierSkuList = []; this.priceOpen = true; },
+    loadSupplierSkus() {
+      if(!this.priceSupplierId){this.supplierSkuList=[];return}
+      this.skuLoading = true;
+      listSupplierSku({supplierId:this.priceSupplierId,pageSize:500}).then(r=>{
+        this.supplierSkuList = (r.rows||[]).map(s=>({...s,newPrice:s.price||0}));
+        this.skuLoading = false;
+      }).catch(()=>{this.skuLoading=false});
     },
-    submitPrices() {
-      if(!this.addSupplierId){this.$message.warning('请选择供应商');return}
-      if(!this.selectedGoods){this.$message.warning('请选择商品');return}
-      const skus = this.skuPriceList.filter(s=>s.price>0).map(s=>({skuId:s.skuId||s.id,price:s.price,skuCode:s.skuCode,skuName:s.skuName}));
-      if(skus.length===0){this.$message.warning('请至少设置一个SKU的价格');return}
-      linkGoodsFromLibrary({supplierId:this.addSupplierId,goodsId:this.selectedGoods.id,skus}).then(r=>{
-        if(r.code===200){this.$message.success('报价添加成功');this.priceOpen=false;this.getList()}
-        else this.$message.error(r.msg||'添加失败')
+    submitSupplierPrices() {
+      if(!this.priceSupplierId){this.$message.warning('请选择供应商');return}
+      const items = this.supplierSkuList.filter(s=>s.newPrice>0).map(s=>({skuItemId:s.id,erpSkuId:s.erpGoodsSkuId,price:s.newPrice}));
+      if(items.length===0){this.$message.warning('请至少设置一个SKU的新报价');return}
+      saveSupplierPrice({supplierId:this.priceSupplierId,skus:items}).then(r=>{
+        if(r.code===200){this.$message.success('报价保存成功');this.priceOpen=false;this.getList()}
+        else this.$message.error(r.msg||'保存失败')
       });
     },
   }

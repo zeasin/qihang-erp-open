@@ -218,15 +218,14 @@ export default {
       }
     },
     qtyChange(nv,row) {
-      console.log('======值变化=====', nv,row)
-      // const newItemAmount = nv.quantity * nv.purPrice
-      // this.form.orderAmount += newItemAmount;
       this.form.orderAmount = 0
       if (this.form.goodsList && this.form.goodsList.length > 0) {
         this.form.goodsList.forEach(item => {
-          this.form.orderAmount+= item.quantity*item.purPrice
-        })
+          item.itemAmount = Math.round((item.quantity || 0) * (item.purPrice || 0) * 100) / 100;
+          this.form.orderAmount += item.itemAmount;
+        });
       }
+      this.form.orderAmount = Math.round(this.form.orderAmount * 100) / 100;
     },
     // 搜索供应商
     searchSupplier(query) {
@@ -272,12 +271,12 @@ export default {
       let goodsAmount = 0;
       this.form.goodsList.forEach(item => {
         if(!item.quantity) item.quantity= 1
-        item.itemAmount = item.quantity*item.retailPrice
-        goodsAmount+= item.itemAmount
+        item.itemAmount = Math.round(item.quantity * (item.retailPrice || 0) * 100) / 100
+        goodsAmount += item.itemAmount
         if(!item.isGift) item.isGift = '0'
       })
       console.log('====添加后=====',this.form.goodsList)
-      this.form.orderAmount = goodsAmount
+      this.form.orderAmount = Math.round(goodsAmount * 100) / 100
     },
     addGoodsCancel() {
       this.goodsForm.skuId = null
@@ -347,9 +346,11 @@ export default {
       this.form.orderAmount = 0
       if (this.form.goodsList && this.form.goodsList.length > 0) {
         this.form.goodsList.forEach(item => {
-          this.form.orderAmount+= item.quantity*item.purPrice
-        })
+          item.itemAmount = Math.round((item.quantity || 0) * (item.purPrice || 0) * 100) / 100;
+          this.form.orderAmount += item.itemAmount;
+        });
       }
+      this.form.orderAmount = Math.round(this.form.orderAmount * 100) / 100;
     },
     cancel() {
       // 调用全局挂载的方法,关闭当前标签页
