@@ -8,6 +8,7 @@
         <tags-view v-if="settingsStore.tagsView" />
       </div>
       <app-main />
+      <ChatWidget />
     </div>
   </div>
 </template>
@@ -20,6 +21,7 @@ import Sidebar from './components/Sidebar.vue'
 import Navbar from './components/Navbar.vue'
 import TagsView from './components/TagsView.vue'
 import AppMain from './components/AppMain.vue'
+import ChatWidget from '@/components/ChatWidget/index.vue'
 
 const appStore = useAppStore()
 const settingsStore = useSettingsStore()

@@ -21,6 +21,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import jakarta.servlet.DispatcherType;
 
 @Configuration
 @EnableWebSecurity
@@ -65,6 +66,8 @@ public class SecurityConfig {
                 // 前后端分离是无状态的，不需要session了，直接禁用。
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests
+                        // 放行异步调度（SseEmitter等）
+                        .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         // 允许所有OPTIONS请求
                         .requestMatchers("/home").permitAll()
                         .requestMatchers(HttpMethod.GET, "/favicon.ico").permitAll()

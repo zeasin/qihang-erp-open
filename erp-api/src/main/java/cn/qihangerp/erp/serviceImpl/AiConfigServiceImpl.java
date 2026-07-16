@@ -12,6 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class AiConfigServiceImpl extends ServiceImpl<AiConfigMapper, AiConfig> implements AiConfigService {
 
+    @Override
+    public AiConfig getDefaultConfig() {
+        return lambdaQuery()
+                .eq(AiConfig::getIsDefault, 1)
+                .eq(AiConfig::getIsEnabled, 1)
+                .one();
+    }
+
     @Transactional
     @Override
     public boolean setDefault(Long id) {
