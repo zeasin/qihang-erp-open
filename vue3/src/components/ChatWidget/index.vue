@@ -16,11 +16,11 @@
 
         <div class="chat-messages" ref="messagesRef">
           <div v-for="(msg, i) in messages" :key="i" :class="['message', msg.role]">
-            <div class="message-bubble">{{ filterContent(msg.content) }}</div>
+            <div class="message-bubble" v-html="renderMarkdown(filterContent(msg.content))"></div>
           </div>
           <div v-if="streamingText !== null" class="message assistant">
             <div class="message-bubble streaming">
-              <template v-if="streamingText">{{ filterContent(streamingText) }}</template>
+              <template v-if="streamingText"><span v-html="renderMarkdown(filterContent(streamingText))"></span></template>
               <template v-else><span class="thinking-text">思考中</span></template>
               <span class="loading-dots"><span>.</span><span>.</span><span>.</span></span>
             </div>
@@ -49,6 +49,7 @@
 import { ref, nextTick } from 'vue'
 import { ChatDotRound, Close } from '@element-plus/icons-vue'
 import { getToken } from '@/utils/auth'
+import { marked } from 'marked'
 
 interface Msg {
   sessionId: string
@@ -71,7 +72,13 @@ function open() {
     messages.value.push({
       sessionId: '',
       role: 'assistant',
-      content: '你好！我是启航电商ERP的AI助手，有什么可以帮助你的吗？'
+      content: `你好！我是启航电商ERP的AI助手，可以帮你：
+
+**📦 商品查询** — 搜索商品名称、SKU编码、价格、规格等信息
+
+你可以这样问我：
+- "搜索商品名中含黄金的商品"
+- "帮我查一下SKU编码SS001-YN"`
     })
   }
 }
@@ -196,7 +203,12 @@ function newConversation() {
 }
 
 function filterContent(text: string): string {
-  return text.split('\n').filter(line => line.trim()).join('\n')
+  return text.replace(/\n{3,}/g, '\n\n')
+}
+
+function renderMarkdown(text: string): string {
+  if (!text) return ''
+  return marked.parse(text) as string
 }
 
 function scrollToBottom() {
@@ -226,8 +238,8 @@ function scrollToBottom() {
   position: absolute;
   bottom: 0;
   right: 0;
-  width: 420px;
-  height: 620px;
+  width: 520px;
+  height: 720px;
   background: #fff;
   border-radius: 12px;
   box-shadow: 0 8px 28px rgba(0, 0, 0, 0.18);
@@ -282,9 +294,54 @@ function scrollToBottom() {
   max-width: 80%;
   padding: 10px 14px;
   font-size: 14px;
-  line-height: 1.5;
-  white-space: pre-wrap;
+  line-height: 1.6;
   word-break: break-word;
+}
+
+.message-bubble p {
+  margin: 4px 0;
+}
+
+.message-bubble p:first-child {
+  margin-top: 0;
+}
+
+.message-bubble p:last-child {
+  margin-bottom: 0;
+}
+
+.message-bubble ul, .message-bubble ol {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.message-bubble li {
+  margin: 2px 0;
+}
+
+.message-bubble code {
+  background: rgba(0,0,0,0.06);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 13px;
+  font-family: monospace;
+}
+
+.message-bubble pre {
+  background: rgba(0,0,0,0.06);
+  padding: 8px 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 6px 0;
+}
+
+.message-bubble pre code {
+  background: none;
+  padding: 0;
+}
+
+.message-bubble strong {
+  font-weight: 600;
 }
 
 .thinking-text {

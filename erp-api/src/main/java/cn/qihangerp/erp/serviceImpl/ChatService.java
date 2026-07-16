@@ -31,7 +31,7 @@ public class ChatService {
     private final AiConversationHistoryService historyService;
     private final GoodsTools goodsTools;
 
-    private static final String SYSTEM_PROMPT = "你是启航电商ERP系统的AI助手，帮助用户处理电商运营、订单管理、商品管理、库存管理、采购管理、仓库管理、售后管理等方面的问题。请用专业、简洁的中文回答。";
+    private static final String SYSTEM_PROMPT = "你是启航电商ERP系统的AI助手，帮助用户处理电商运营、订单管理、商品管理、库存管理、采购管理、仓库管理、售后管理等方面的问题。请用专业、简洁的中文回答。\n\n可用的工具：\n- searchGoods(keyword)：根据关键词搜索ERP商品库中的商品，返回商品名称、编号、零售价等\n- searchSku(keyword)：根据SKU编码或名称搜索商品SKU，返回编码、价格、规格等详细信息\n\n当你需要查询商品信息时，请调用对应的工具。";
 
     public void streamResponse(AiConfig config, SseEmitter emitter, String sessionId, Long userId) {
         try {
