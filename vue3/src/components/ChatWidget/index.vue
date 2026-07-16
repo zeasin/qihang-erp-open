@@ -16,11 +16,11 @@
 
         <div class="chat-messages" ref="messagesRef">
           <div v-for="(msg, i) in messages" :key="i" :class="['message', msg.role]">
-            <div class="message-bubble">{{ msg.content }}</div>
+            <div class="message-bubble">{{ filterContent(msg.content) }}</div>
           </div>
           <div v-if="streamingText !== null" class="message assistant">
             <div class="message-bubble streaming">
-              {{ streamingText }}<span class="cursor" />
+              {{ filterContent(streamingText) }}<span class="cursor" />
             </div>
           </div>
         </div>
@@ -191,6 +191,10 @@ function newConversation() {
   sessionId.value = ''
   streamingText.value = null
   input.value = ''
+}
+
+function filterContent(text: string): string {
+  return text.split('\n').filter(line => line.trim()).join('\n')
 }
 
 function scrollToBottom() {

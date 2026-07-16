@@ -1,5 +1,6 @@
 package cn.qihangerp.erp.serviceImpl;
 
+import cn.qihangerp.erp.serviceImpl.ai.GoodsTools;
 import cn.qihangerp.model.entity.AiConfig;
 import cn.qihangerp.model.entity.AiConversationHistory;
 import cn.qihangerp.service.AiConversationHistoryService;
@@ -15,11 +16,7 @@ import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.ai.deepseek.DeepSeekChatOptions;
 import org.springframework.ai.deepseek.api.DeepSeekApi;
 import org.springframework.ai.model.SimpleApiKey;
-import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.DefaultResponseErrorHandler;
-import org.springframework.web.client.RestClient;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -32,6 +29,7 @@ import java.util.List;
 public class ChatService {
 
     private final AiConversationHistoryService historyService;
+    private final GoodsTools goodsTools;
 
     private static final String SYSTEM_PROMPT = "你是启航电商ERP系统的AI助手，帮助用户处理电商运营、订单管理、商品管理、库存管理、采购管理、仓库管理、售后管理等方面的问题。请用专业、简洁的中文回答。";
 
@@ -64,7 +62,9 @@ public class ChatService {
                             .build())
                     .build();
 
-            ChatClient chatClient = ChatClient.create(chatModel);
+            ChatClient chatClient = ChatClient.builder(chatModel)
+                    .defaultTools(goodsTools)
+                    .build();
 
             StringBuilder fullResponse = new StringBuilder();
 
