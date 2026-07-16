@@ -7254,6 +7254,8 @@ INSERT INTO `sys_menu` VALUES (2177, 'AI 智能', 0, 70, '/ai', 'Layout', '', 1,
 
 -- 子菜单：模型配置（parent_id=2177, order_num=1）
 INSERT INTO `sys_menu` VALUES (2178, '模型配置', 2177, 1, 'config', 'ai/config', '', 1, 0, 'C', '0', '0', 'ai:config:list', 'example', 'admin', NOW(), '', NULL, 'AI模型配置');
+-- 子菜单：智能分析（parent_id=2177, order_num=2）
+INSERT INTO `sys_menu` VALUES (2179, '智能分析', 2177, 2, 'analysis', 'ai/analysis', '', 1, 0, 'C', '0', '0', 'ai:analysis:list', 'chart', 'admin', NOW(), '', NULL, 'AI智能分析');
 -- ----------------------------
 -- Table structure for sys_open_auth
 -- ----------------------------

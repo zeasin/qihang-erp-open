@@ -1,6 +1,6 @@
 package cn.qihangerp.erp.serviceImpl;
 
-import cn.qihangerp.erp.serviceImpl.ai.GoodsTools;
+import cn.qihangerp.erp.serviceImpl.ai.AiOrchestrationService;
 import cn.qihangerp.model.entity.AiConfig;
 import cn.qihangerp.model.vo.SalesDailyVo;
 import cn.qihangerp.service.AiConfigService;
@@ -10,16 +10,8 @@ import cn.qihangerp.service.OShopService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
-import org.springframework.ai.deepseek.DeepSeekChatModel;
-import org.springframework.ai.deepseek.DeepSeekChatOptions;
-import org.springframework.ai.deepseek.api.DeepSeekApi;
-import org.springframework.ai.model.SimpleApiKey;
-import org.springframework.http.client.ReactorClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.RestClient;
-import reactor.netty.http.client.HttpClient;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -38,9 +30,7 @@ public class AiBriefService {
     private final OOrderItemService orderItemService;
     private final OShopService shopService;
     private final AiConfigService aiConfigService;
-    private final GoodsTools goodsTools;
-
-    private final ChatClient.Builder chatClientBuilder;
+    private final AiOrchestrationService orchestrationService;
 
     /**
      * 生成AI工作台简报
@@ -73,42 +63,9 @@ public class AiBriefService {
         }
     }
 
-    /**
-     * 调用DeepSeek生成AI简报
-     */
-    private ChatClient buildChatClient() {
-        AiConfig config = aiConfigService.getDefaultConfig();
-        if (config != null && config.getApiEndpoint() != null && config.getApiKey() != null) {
-            try {
-                String baseUrl = config.getApiEndpoint().replaceAll("/v1/?$", "").replaceAll("/+$", "");
-                var httpClient = HttpClient.create()
-                        .responseTimeout(Duration.ofSeconds(120));
-                var factory = new ReactorClientHttpRequestFactory(httpClient);
-                factory.setReadTimeout(Duration.ofSeconds(120));
-                DeepSeekApi api = DeepSeekApi.builder()
-                        .baseUrl(baseUrl)
-                        .apiKey(new SimpleApiKey(config.getApiKey()))
-                        .completionsPath("/v1/chat/completions")
-                        .restClientBuilder(RestClient.builder().requestFactory(factory))
-                        .build();
-                DeepSeekChatModel chatModel = DeepSeekChatModel.builder()
-                        .deepSeekApi(api)
-                        .options(DeepSeekChatOptions.builder()
-                                .model(config.getModelName())
-                                .build())
-                        .build();
-                return ChatClient.builder(chatModel)
-                        .defaultTools(goodsTools)
-                        .build();
-            } catch (Exception e) {
-                log.warn("动态ChatClient构建失败，使用默认", e);
-            }
-        }
-        return chatClientBuilder.build();
-    }
-
     private AiBriefResponse callAiForBrief(Map<String, Object> todayData, List<SalesDailyVo> recentSales) {
-        ChatClient chatClient = buildChatClient();
+        AiConfig config = aiConfigService.getDefaultConfig();
+        ChatClient chatClient = orchestrationService.buildChatClient(config);
 
         // 构建销售趋势文本
         StringBuilder trendText = new StringBuilder();
