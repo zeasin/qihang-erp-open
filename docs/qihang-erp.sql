@@ -7249,7 +7249,11 @@ INSERT INTO `sys_menu` VALUES (2161, '供应商报价', 7, 30, 'suppiler_price_l
 INSERT INTO `sys_menu` VALUES (2171, '云仓发货-手动确认', 8, 15, 'cloud_warehouse/manual_ship', 'shipping/cloud_warehouse/manual_ship.vue', NULL, 1, 0, 'C', '1', '0', NULL, '#', 'admin', '2026-04-24 16:38:40', '', NULL, '');
 INSERT INTO `sys_menu` VALUES (2172, '供应商产品', 4, 13, 'supplier_product_list', 'vendor/product', NULL, 1, 0, 'C', '0', '0', '', 'supplierGoods', 'admin', '2026-05-02 08:41:49', 'admin', '2026-05-02 08:51:09', '');
 INSERT INTO `sys_menu` VALUES (2173, '发货快递设置', 8, 99, 'ship_logistics', 'shipping/logistics/index', NULL, 1, 0, 'C', '0', '0', NULL, 'logistics', 'admin', '2026-05-04 09:07:37', '', NULL, '');
+-- 一级目录：AI 智能（parent_id=0, order_num=70）
+INSERT INTO `sys_menu` VALUES (2177, 'AI 智能', 0, 70, '/ai', 'Layout', '', 1, 0, 'M', '0', '0', '', 'ai', 'admin', NOW(), '', NULL, 'AI智能菜单');
 
+-- 子菜单：模型配置（parent_id=2177, order_num=1）
+INSERT INTO `sys_menu` VALUES (2178, '模型配置', 2177, 1, 'config', 'ai/config', '', 1, 0, 'C', '0', '0', 'ai:config:list', 'example', 'admin', NOW(), '', NULL, 'AI模型配置');
 -- ----------------------------
 -- Table structure for sys_open_auth
 -- ----------------------------
@@ -7862,5 +7866,23 @@ CREATE TABLE `wms_warehouse_position`  (
 -- ----------------------------
 -- Records of wms_warehouse_position
 -- ----------------------------
+-- AI大模型配置表
+DROP TABLE IF EXISTS `ai_config`;
+CREATE TABLE `ai_config` (
+                             `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+                             `name` varchar(100) NOT NULL COMMENT '配置名称（如：我的DeepSeek、阿里云百炼）',
+                             `api_endpoint` varchar(500) NOT NULL COMMENT 'API地址（兼容OpenAI格式）',
+                             `api_key` varchar(500) NOT NULL COMMENT 'API密钥',
+                             `model_name` varchar(100) NOT NULL COMMENT '模型名称（如：deepseek-chat、qwen-plus、gpt-4o）',
+                             `is_enabled` tinyint DEFAULT '1' COMMENT '是否启用：0禁用 1启用',
+                             `is_default` tinyint DEFAULT '0' COMMENT '是否默认：0否 1是',
+                             `sort_order` int DEFAULT '0' COMMENT '排序号',
+                             `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+                             `create_by` varchar(64) DEFAULT '' COMMENT '创建者',
+                             `create_time` datetime DEFAULT NULL COMMENT '创建时间',
+                             `update_by` varchar(64) DEFAULT '' COMMENT '更新者',
+                             `update_time` datetime DEFAULT NULL COMMENT '更新时间',
+                             PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='AI大模型配置表';
 
 SET FOREIGN_KEY_CHECKS = 1;

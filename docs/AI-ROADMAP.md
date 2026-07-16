@@ -1,342 +1,384 @@
 # 启航电商ERP — AI 化实施方案
 
-> **日期**：2026-07-04 | **基于**：qihang-erp-open（现有项目）
+> **日期**：2026-07-16 | **版本**：v3（以用户场景驱动，基础设施先行）
 >
-> **当前阶段**：系统稳定化（修复 4.1.0 升级带来的 BUG）
-> **AI 化启动**：待系统稳定后执行
+> 相关文档：
+> - [AI 场景全集](AI-SCENARIOS.md) — 82 个用户场景定义
+> - [AI 基础设施架构](AI-INFRASTRUCTURE.md) — 7 层基础设施设计
 
 ---
 
-## 当前优先级
+## 一、当前 AI 现状评估
 
-> ⚠️ 系统刚升级到 Spring Boot 4.1.0 + Spring AI 2.0，先修复 BUG 稳定系统，
-> 再按以下方案推进 AI 化。
+### 1.1 已实现
 
----
+| 模块 | 前端 vue3 | 后端 | 状态 |
+|------|-----------|------|------|
+| 首页 AI 工作台（简报） | `dashboard/index.vue` | `AiBriefController` + `AiBriefService` | ✅ **已实现** |
+| SSE 实时通知（新订单推送） | — | `SseService` + `NotifyController` | ✅ **已实现** |
+| AI 分析页（销售/库存/客户分析） | `views/ai/analysis.vue` | 后端 API 缺失 | ⚠️ 前端有，后端未实现 |
+| AI 配置页（DeepSeek 设置） | `views/ai/config.vue` | 后端 API 缺失 | ⚠️ 前端有，后端未实现 |
+| SSE AI 对话 | 无 | `SseController` stub（返回"暂不支持"） | ❌ 占位 |
+| AI 角色管理 | 无 | `AiUserRoleController` stub | ❌ 占位 |
+| DeepSeek 集成 | — | Spring AI `ChatClient` 裸调 | ⚠️ 基础可用，无记忆无 Tool |
 
-## 一、现状评估
+### 1.2 核心差距
 
-### 1.1 现有基础
-
-| 维度 | 状态 | 说明 |
-|------|------|------|
-| Spring AI 2.0 | ✅ 已配置 | pom.xml 中 `spring-ai-starter-model-deepseek` 已启用 |
-| Spring Boot | ✅ 4.1.0 | 最新版，Spring Framework 7.x |
-| 业务功能 | ✅ 完整 | 88 个 Controller，覆盖订单/商品/库存/售后/发货/采购 |
-| 前端 | ✅ Vue 2 | 完整的管理后台，Element UI 组件库 |
-| 数据库 | ✅ MySQL | 全部业务数据 |
-| AI 工作台 | ✅ 已实现 | 首页 AI 简报（今日需处理 + 快速数据 + 快捷入口 + AI 提问） |
-| 安全框架 | ✅ Spring Security | JWT 认证，白名单机制 |
-
-### 1.2 远景目标（来自 qihang-ai-erp/docs）
-
-| 能力 | 描述 |
+| 差距 | 影响 |
 |------|------|
-| AI Agent 体系 | 订单/库存/商品/采购/售后各域 Agent |
-| NL2SQL 智能查询 | 自然语言转 SQL，安全校验后执行 |
-| 智能供应链 | 销量预测，补货建议，调拨建议 |
-| MCP 开放协议 | 对外暴露 AI 能力，支持 Claude/ChatGPT 调用 |
-| 主动预警 | 低库存/超时未发/高退款率主动推送 |
-
-### 1.3 差距分析
-
-| 能力 | 目标状态 | 当前状态 | 差距 |
-|------|---------|---------|------|
-| AI 对话 | 流式 SSE + 多轮记忆 | 首页简单提问跳转 | 缺 SSE 流式、缺记忆 |
-| AI 写入 | 改状态、调库存、用户确认 | 未实现 | 全新 |
-| 主动预警 | 定时扫描 + 消息推送 + AI 解读 | 未实现 | 全新 |
-| Agent 体系 | 按域划分 Agent + Tool | 未实现 | 全新 |
-| NL2SQL | 自然语言查数据 | 未实现 | 全新 |
-| RAG | 系统操作问答（帮助文档） | 未实现 | 全新 |
-| 智能供应链 | 预测 + 补货 + 调拨 | 未实现 | 全新 |
-| MCP | 对外暴露 AI 能力 | 未实现 | 全新 |
+| **无 Tool 系统** | AI 只能说话不能做事，所有操作类场景无法实现 |
+| **无对话记忆** | 每次提问都是独立的，无法多轮追问 |
+| **无数据编排** | 复杂分析需要手写拼 prompt，不可扩展 |
+| **无前端 AI 浮窗** | 用户要跳转到独立页面才能用 AI，不够方便 |
+| **无主动预警** | 用户不打开系统就发现不了问题 |
+| **无操作安全保障** | 没有权限校验 + 用户确认机制，改写操作有风险 |
 
 ---
 
-## 二、技术方案
+## 二、AI 场景全集
 
-### 2.1 总体架构
+共 **82 个场景**，覆盖 **10 个 AI 角色**，详见 [AI 场景全集](AI-SCENARIOS.md)：
+
+| AI 角色 | 场景数 | 一句话定位 |
+|---------|--------|-----------|
+| 🚑 **救急员** | 11 | 有问题直接问 AI，一句话排查/解决 |
+| 🎯 **排班经理** | 8 | 上班第一眼就知道今天该做什么 |
+| 🤖 **自动化操作** | 11 | 动嘴不动手，AI 帮你干 |
+| 🧭 **操作教练** | 8 | 不会用就教，降低培训成本 |
+| 📊 **经营分析** | 12 | 不看表格看结论，辅助决策 |
+| 🔍 **质量员** | 10 | 发现用户没注意到的问题（异常检测） |
+| 📦 **供应链顾问** | 6 | 采购/库存/调拨更智能 |
+| 🗺️ **调度员** | 4 | 自动匹配最优资源 |
+| 🧠 **学习助手** | 5 | 越用越懂你 |
+| 🔗 **跨模块分析** | 7 | 打通数据孤岛做综合分析 |
+
+---
+
+## 三、基础设施架构
+
+要实现以上 82 个场景，需要在现有系统上搭建 **7 层基础设施**，详见 [AI 基础设施架构](AI-INFRASTRUCTURE.md)：
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                        前端 (Vue 2)                          │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────────┐  │
-│  │ 首页AI   │  │ AI对话   │  │ 消息中心 │  │ 现有业务   │  │
-│  │ 工作台   │  │ 页面     │  │ (角标)   │  │ 页面       │  │
-│  └──────────┘  └──────────┘  └──────────┘  └────────────┘  │
-├──────────────────────────────────────────────────────────────┤
-│                    API 层 (erp-api)                           │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────────┐  │
-│  │ /api/ai  │  │ /api/ai  │  │ /api/ai  │  │ /api/erp   │  │
-│  │ /brief   │  │ /chat    │  │ /alert   │  │ (88个业务) │  │
-│  └──────────┘  └──────────┘  └──────────┘  └────────────┘  │
-├──────────────────────────────────────────────────────────────┤
-│                    AI 服务层 (新增)                           │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌────────────┐  │
-│  │ Chat内存 │  │ 写入工具  │  │ 预警扫描 │  │ NL2SQL     │  │
-│  │ 记忆     │  │ (确认后)  │  │ (定时)   │  │ 引擎       │  │
-│  └──────────┘  └──────────┘  └──────────┘  └────────────┘  │
-├──────────────────────────────────────────────────────────────┤
-│                    数据层 (已有)                              │
-│  ┌──────────────────┐  ┌──────────────────┐                 │
-│  │ MySQL (业务数据)  │  │ Redis (缓存/会话)│                 │
-│  └──────────────────┘  └──────────────────┘                 │
-└──────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│  ⑤ 前端 AI 交互层（AI浮窗/通知中心/内联建议/确认弹窗）     │
+├─────────────────────────────────────────────────────────────┤
+│  ③ 对话引擎（会话管理/记忆/Context 注入）                   │
+│  ② Tool 注册中心（查询/分析/操作 Tool + 权限+确认+日志）   │
+│  ④ 数据编排引擎（意图→DataResolver 聚合→Prompt 构建）      │
+│  ⑥ 主动预警引擎（定时扫描→AI解读→SSE推送）                │
+├─────────────────────────────────────────────────────────────┤
+│  ① 大模型接入层（多模型配置/切换/降级）                    │
+│  ⑦ 安全与控制（权限校验/数据隔离/用户确认/操作日志）       │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-### 2.2 技术选型
+**关键依赖关系：**
+- ① + ② + ③ + ⑤ + ⑦ 是**核心骨架**，覆盖 60+ 个场景
+- ④ + ⑥ 是**增强能力**，可在核心骨架上增量添加
+
+---
+
+## 四、实施方案（按基础设施分层推进）
+
+### 阶段一：基础设施搭建 — 大模型接入 + AI 配置管理
+
+**目标：** AI 能用起来，用户可以配置模型参数
+
+| 产出 | 说明 |
+|------|------|
+| `ai_config` 数据库表 + CRUD API | 持久化 API Key、Endpoint、Model |
+| 补齐 `AiConfigController` / `AiConfigService` | vue3 配置页已有，连上后端 |
+| 模型接入抽象 `AiModelService` | 支持 DeepSeek / Ollama / OpenAI 兼容 |
+| 健康检查 + 降级机制 | 模型不可用时自动降级 |
+
+**覆盖场景基础：** 全部 82 个场景依赖此层
+
+---
+
+### 阶段二：核心骨架搭建 — Tool 系统 + 对话引擎 + AI 浮窗 + 安全
+
+**目标：** AI 能对话、能查数据、能做简单操作
+
+| 模块 | 产出 | 说明 |
+|------|------|------|
+| **Tool 注册中心** | `AiTool` 接口 + 注册 + 执行引擎 | 首个批次实现 10-15 个核心 Tool |
+| **对话引擎** | 会话管理（CRUD）+ 多轮记忆 + 页面 Context 注入 | 支持连续对话 |
+| **前端 AI 浮窗** | 全局悬浮按钮 + SSE 流式对话面板 | 所有页面可用 |
+| **安全控制** | Tool 权限校验 + 数据隔离 + 操作日志 | 写入操作需用户确认 |
+
+**首批 Tool 清单：**
+
+| Tool | 类型 | 对应场景 |
+|------|------|---------|
+| `getOrderInfo` | 查询 | 救急员-订单排查 |
+| `getRefundInfo` | 查询 | 救急员-售后处理 |
+| `getGoodsInfo` | 查询 | 救急员-商品查询 |
+| `getInventory` | 查询 | 救急员-库存查询 |
+| `getLogisticsTrace` | 查询 | 救急员-物流查询 |
+| `searchOrder` | 搜索 | 全场搜 |
+| `searchGoods` | 搜索 | 全场搜 |
+| `getSalesTrend` | 分析 | 经营分析 |
+| `getRefundAnalysis` | 分析 | 经营分析-退款分析 |
+| `getInventoryAlert` | 分析 | 排班经理-库存告警 |
+| `createPurchaseOrder` | 操作 | 自动化操作-创建采购单 |
+| `updateOrderAddress` | 操作 | 自动化操作-改地址 |
+| `batchShip` | 操作 | 自动化操作-批量发货 |
+| `createAfterSale` | 操作 | 自动化操作-创建售后单 |
+
+**覆盖场景：** 🚑 救急员 + 🤖 自动化操作 + 🧭 操作教练 + 部分 📊 经营分析 ≈ **40+ 场景**
+
+---
+
+### 阶段三：数据编排引擎 — 复杂分析场景
+
+**目标：** "退款率为什么高了？"这种跨表分析能一句话回答
+
+| 产出 | 说明 |
+|------|------|
+| `DataResolver` 注册中心 | 每个 Resolver 封装一种数据查询能力 |
+| 意图匹配器 | 用户提问 → 匹配对应的 DataResolver 组合 |
+| 动态数据聚合器 | 调用多个 Resolver → 数据组装 → Prompt 构建 |
+| 首批 Resolver | 退款分析、销售排行、库存分析、店铺对比 |
+
+**DataResolver 示例：**
+```java
+// "退款率为什么高了" 触发：
+resolverChain = [
+    RefundTrendResolver,        // 退款率趋势
+    TopRefundGoodsResolver,     // 退款TOP商品
+    RefundReasonResolver,       // 退款原因分布
+    ShopRefundCompareResolver   // 店铺对比
+]
+```
+
+**覆盖场景：** 📊 经营分析 + 🔗 跨模块分析 ≈ **19 个场景**
+
+---
+
+### 阶段四：主动预警引擎 — 系统找用户
+
+**目标：** 系统主动推送问题，用户打开系统就知道
+
+| 产出 | 说明 |
+|------|------|
+| 定时扫描任务 | 库存预警、订单超时、退款率异常、授权过期 |
+| 规则引擎 + AI 解读 | 扫描结果 → AI 生成解读和建议 |
+| `sys_notification` 表 + API | 通知持久化 |
+| 前端通知中心 | 顶部铃铛 + 角标 + 下拉/完整列表 |
+| SSE 实时推送 | 产生通知后立即推送到前端 |
+
+**覆盖场景：** 🎯 排班经理 + 🔍 质量员 ≈ **18 个场景**
+
+---
+
+### 阶段五：高阶能力
+
+| 能力 | 说明 | 前置依赖 |
+|------|------|---------|
+| **智能供应链** | 销量预测 + 智能补货 + 库存调拨 | 阶段三编排引擎 |
+| **RAG 帮助系统** | 操作手册向量化 → 问答 | 需引入 PGVector |
+| **NL2SQL** | 自然语言查任意数据 | 阶段三编排引擎 |
+| **MCP 开放协议** | 对外暴露 AI 能力 | 阶段二 Tool 系统 |
+
+---
+
+## 五、技术选型
 
 | 组件 | 选型 | 说明 |
 |------|------|------|
 | AI 框架 | Spring AI 2.0 | 已集成，DeepSeek 模型 |
 | 对话记忆 | `InMemoryChatMemory` → `RedisChatMemory` | 先内存后持久化 |
-| 定时任务 | Spring `@Scheduled` | 已有，在 ErpApi 中已启用 |
-| 消息推送 | WebSocket / SSE | 已有 SSE 基础 |
-| 消息存储 | MySQL `sys_notification` | 新建表 |
+| 定时任务 | Spring `@Scheduled` | 已有，ErpApi 已启用 |
+| 实时推送 | SSE（已有 `SseService`） | 新订单已实现，预警消息复用 |
+| 通知存储 | MySQL `sys_notification` | 新增表 |
 | 操作日志 | MySQL `sys_oper_log` | 已有表 |
-| NL2SQL | ChatClient + JdbcTemplate | Spring AI + 已有 JDBC |
+| 向量库（后续） | PGVector | 阶段五 RAG 引入 |
 
-### 2.3 新增数据库表
+---
+
+## 六、新增数据库表
 
 ```sql
--- 消息通知表
+-- AI 配置表
+CREATE TABLE `ai_config` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `model_name` varchar(100) NOT NULL COMMENT '模型名称，如 deepseek-chat',
+  `api_endpoint` varchar(500) NOT NULL COMMENT 'API 地址',
+  `api_key` varchar(500) NOT NULL COMMENT 'API Key（加密存储）',
+  `model_type` varchar(50) NOT NULL COMMENT '模型类型：deepseek/ollama/openai',
+  `is_default` tinyint DEFAULT '0' COMMENT '是否默认',
+  `status` tinyint DEFAULT '1' COMMENT '状态：0禁用/1启用',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `create_time` datetime DEFAULT NULL,
+  `update_time` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI模型配置表';
+
+-- AI 会话表
+CREATE TABLE `ai_conversation` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `title` varchar(200) DEFAULT NULL COMMENT '会话标题',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `merchant_id` bigint DEFAULT NULL COMMENT '商户ID',
+  `message_count` int DEFAULT '0' COMMENT '消息数',
+  `status` tinyint DEFAULT '1' COMMENT '状态：0已删除/1正常',
+  `created_time` datetime DEFAULT NULL,
+  `updated_time` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_user` (`user_id`),
+  KEY `idx_updated` (`updated_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI会话表';
+
+-- AI 消息表
+CREATE TABLE `ai_message` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `conversation_id` bigint NOT NULL COMMENT '会话ID',
+  `role` varchar(20) NOT NULL COMMENT '角色：user/assistant/tool',
+  `content` text COMMENT '消息内容',
+  `tool_name` varchar(100) DEFAULT NULL COMMENT 'Tool名称（role=tool时）',
+  `tool_args` text COMMENT 'Tool参数（JSON）',
+  `tool_result` text COMMENT 'Tool返回结果',
+  `page_context` varchar(500) DEFAULT NULL COMMENT '页面上下文（用户当前页面路径）',
+  `created_time` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_conversation` (`conversation_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='AI消息记录表';
+
+-- 通知表
 CREATE TABLE `sys_notification` (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `title` varchar(200) NOT NULL COMMENT '标题',
   `content` text COMMENT '内容',
-  `type` varchar(50) NOT NULL COMMENT '类型：stock_alert/order_timeout/refund_rate/purchase_delay',
+  `type` varchar(50) NOT NULL COMMENT '类型：stock_alert/order_timeout/refund_rate/auth_expire',
   `biz_id` varchar(100) DEFAULT NULL COMMENT '业务ID',
   `level` varchar(20) DEFAULT 'medium' COMMENT '级别：high/medium/low',
   `ai_analysis` text COMMENT 'AI解读',
   `ai_action` varchar(200) DEFAULT NULL COMMENT 'AI建议操作',
   `ai_link` varchar(500) DEFAULT NULL COMMENT '跳转链接',
+  `receiver_id` bigint DEFAULT NULL COMMENT '接收人ID',
   `is_read` tinyint DEFAULT '0' COMMENT '是否已读',
-  `receiver_id` bigint DEFAULT NULL COMMENT '接收人',
+  `read_time` datetime DEFAULT NULL,
   `created_time` datetime DEFAULT NULL,
   PRIMARY KEY (`id`),
   KEY `idx_receiver` (`receiver_id`,`is_read`),
   KEY `idx_type` (`type`),
   KEY `idx_created` (`created_time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='消息通知表';
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统通知表';
 ```
 
 ---
 
-## 三、功能规划
-
-### 3.1 🏠 首页 AI 工作台（已实现）
-
-```
-功能清单：
-├── ✅ AI 简报（问候 + 一句话总结 + 趋势）
-├── ✅ 快速数据条（销售额/订单量/待发货/退款率）
-├── ✅ 今日需处理卡片（发货/库存/建议，按优先级排列）
-├── ✅ 快捷入口（订单/发货/售后/库存管理）
-└── ✅ AI 提问（输入框 + 快捷提示）
-```
-
-### 3.2 💬 AI 对话页（Phase 1）
-
-```
-功能清单：
-├── 流式 SSE 对话（逐 token 渲染）
-├── 多轮对话记忆（上下文连贯）
-├── Markdown 表格渲染（数据展示清晰）
-├── 快捷指令（常见问题一键触发）
-├── 对话历史管理（侧边栏历史会话列表）
-└── 领域限制（非业务问题礼貌拒绝）
-
-后端接口：
-├── POST /api/ai/chat（SSE 流式）
-├── GET /api/ai/chat/history
-└── DELETE /api/ai/chat/clear
-```
-
-### 3.3 ⚠️ 主动预警 + 消息中心（Phase 2）
-
-```
-功能清单：
-├── 定时任务扫描：
-│   ├── 库存低于预警线 → 生成预警消息
-│   ├── 订单超 24h 未发货 → 生成催发货消息
-│   ├── 退款率异常升高 → 生成分析消息
-│   └── 采购单超期未入库 → 生成提醒消息
-├── AI 增强解读：异常数据传给 AI 生成行动建议
-├── 消息中心：顶部角标 + 消息列表 + 已读/未读
-├── 消息详情：跳转到对应业务页面
-└── 消息类型：stock_alert / order_timeout / refund_rate / purchase_delay
-
-后端接口：
-├── GET /api/ai/alert/list（消息列表）
-├── PUT /api/ai/alert/read/{id}（标记已读）
-└── GET /api/ai/alert/unread-count（未读数）
-```
-
-### 3.4 ✍️ AI 写入操作（Phase 2）
-
-```
-功能清单：
-├── 写入型 Tool：
-│   ├── updateOrderStatus（改订单状态）
-│   ├── adjustStock（调整库存）
-│   └── createNote（添加备注）
-├── 用户确认流程：
-│   ├── ① AI 查询当前状态
-│   ├── ② AI 回复确认信息
-│   ├── ③ 用户确认
-│   └── ④ AI 执行 + 记录日志
-├── 操作日志记录（sys_oper_log）
-└── 可逆操作优先，删除不给 AI
-
-后端接口：
-├── POST /api/ai/chat（对话中处理写入）
-└── 复用已有业务 Service
-```
-
-### 3.5 🔍 NL2SQL 智能查询（Phase 3）
-
-```
-功能清单：
-├── 自然语言 → SQL 查询
-├── 安全校验（仅 SELECT、自动 LIMIT、超时终止）
-├── 多租户过滤（自动追加商户条件）
-├── 结果解释（AI 组织自然语言回复）
-└── 可查询表：订单/商品/库存/采购/售后
-
-后端接口：
-├── POST /api/ai/nl2sql/query
-```
-
-### 3.6 📖 RAG 系统帮助（Phase 4）
-
-```
-用途：用户问"怎么创建采购单？"时，AI 从操作手册中找到答案
-
-功能清单：
-├── 上传操作手册/帮助文档（Markdown/PDF/TXT）
-├── 自动分块 + 向量化
-├── 基于知识库的问答："怎么创建采购单？"
-├── 知识库管理页面（上传/查看/删除文档）
-└── 技术栈：PGVector + Embedding 模型
-
-数据来源：
-├── 系统操作手册（Markdown 格式）
-├── 业务 SOP 流程文档
-├── 常见问题 FAQ
-
-后端接口：
-├── POST /api/ai/knowledge/upload
-├── POST /api/ai/knowledge/search
-├── GET /api/ai/knowledge/list
-└── DELETE /api/ai/knowledge/{id}
-```
-
----
-
-## 四、实施进度
-
-### Phase 1: AI 对话（2-3 周）
-
-| 周次 | 任务 | 产出 |
-|------|------|------|
-| 第 1 周 | SSE 流式对话后端 | `AiChatController` + `AiChatService` |
-| 第 1 周 | 对话记忆接入 | `MessageChatMemoryAdvisor` + `InMemoryChatMemory` |
-| 第 2 周 | AI 对话前端页面 | `Chat.vue`（流式渲染 + Markdown 表格） |
-| 第 2 周 | 快捷指令 + 历史管理 | 侧边栏历史列表 + 快捷指令入口 |
-| 第 3 周 | 领域限制 + 联调 | System Prompt 约束 + 全流程测试 |
-
-### Phase 2: 预警 + 消息 + 写入（3-4 周）
-
-| 周次 | 任务 | 产出 |
-|------|------|------|
-| 第 1 周 | `sys_notification` 表 + 定时扫描任务 | 预警扫描服务 |
-| 第 1 周 | 消息中心后端接口 | 消息列表/已读/未读数 |
-| 第 2 周 | AI 增强解读（预警数据 → AI 生成建议） | `AiAlertEnhancer` |
-| 第 2 周 | 消息中心前端 | 顶部角标 + 消息列表页 |
-| 第 3 周 | 写入型 Tool + 确认流程 | `updateOrderStatus`、`adjustStock` |
-| 第 3 周 | 写入操作日志 + 联调 | 操作日志记录 |
-
-### Phase 3: NL2SQL + 深入（2-3 周）
-
-| 周次 | 任务 | 产出 |
-|------|------|------|
-| 第 1 周 | NL2SQL 引擎 | Schema 元信息 + SQL 生成 + 安全校验 |
-| 第 2 周 | NL2SQL 前端 | 对话中触发 NL2SQL |
-| 第 3 周 | Agent 体系搭建 | 订单/库存 Agent 拆分 |
-
-### Phase 4: RAG 帮助 + 智能供应链（3-4 周）
-
-| 周次 | 任务 | 产出 |
-|------|------|------|
-| 第 1 周 | PGVector 搭建 + 文档上传 + 向量化 | 向量库 + 上传接口 |
-| 第 2 周 | 基于知识库的问答 + 管理页面 | AI 回答系统操作问题 |
-| 第 3 周 | 销量预测 + 补货建议 | 智能供应链引擎 |
-| 第 4 周 | 联调 + 知识库文档编写 | 完整的帮助系统 |
-
----
-
-## 五、风险与应对
+## 七、风险与应对
 
 | 风险 | 影响 | 应对 |
 |------|------|------|
-| Spring AI 2.0 不稳定 | 依赖问题导致编译失败 | 锁定版本，备用 RestTemplate 方案 |
-| DeepSeek API 延迟高 | 对话响应慢 | 前端流式渲染 + 超时提示 |
-| MySQL 数据量大 NL2SQL 慢 | 查询超时 | 自动 LIMIT + 查询超时控制 |
-| 用户不习惯 AI 对话 | 功能无人使用 | 保持传统页面可用，AI 做增值 |
-| 写入操作误执行 | 数据异常 | 用户确认 + 操作日志 + 可逆操作优先 |
+| DeepSeek API 延迟/不稳定 | 对话体验差 | 前端 SSE 流式渲染 + 超时提示 + 支持切换 Ollama 本地模型 |
+| 用户不习惯对话式操作 | 功能无人使用 | 保持传统页面入口 + AI 做增值而非替代 + 从"救急员"这种痛点场景切入 |
+| 大模型生成 SQL 不安全 | 数据泄露 | 先不做 NL2SQL，先走 Tool 白名单模式（预设好的查询路径） |
+| 多租户数据隔离 | 商户间数据泄露 | 每个 Tool 自动注入 merchant_id 过滤 + 权限校验 |
+| 写入型 Tool 误操作 | 数据异常 | 操作前用户确认弹窗 + 操作日志记录 + 可逆操作优先 |
+| Spring AI 2.0 兼容性 | 编译/运行异常 | 锁定版本 + 抽象 `AiModelService` 接口，可随时替换实现 |
 
 ---
 
-## 六、目录结构（新增文件）
+## 八、新增目录结构
 
 ```
 erp-api/src/main/java/cn/qihangerp/erp/
 ├── controller/ai/
-│   ├── AiBriefController.java          # ✅ 已有 - AI简报
-│   ├── AiChatController.java           # 🆕 Phase1 - AI对话(SSE)
-│   ├── AiAlertController.java          # 🆕 Phase2 - 消息中心
-│   └── AiNl2SqlController.java         # 🆕 Phase3 - NL2SQL
-├── serviceImpl/
-│   ├── AiBriefService.java             # ✅ 已有 - AI简报服务
-│   ├── AiChatService.java              # 🆕 Phase1 - AI对话服务
-│   ├── AiAlertService.java             # 🆕 Phase2 - 预警扫描服务
-│   └── AiNl2SqlService.java            # 🆕 Phase3 - NL2SQL引擎
+│   ├── AiBriefController.java           # ✅ 已有 - AI简报
+│   ├── AiConfigController.java          # 🆕 阶段一 - 模型配置管理
+│   ├── AiConversationController.java    # 🆕 阶段二 - 对话管理
+│   ├── AiToolController.java            # 🆕 阶段二 - Tool执行
+│   └── AiNotificationController.java    # 🆕 阶段四 - 通知中心
+├── ai/
+│   ├── config/
+│   │   ├── AiConfigService.java         # 🆕 模型配置持久化
+│   │   └── AiModelService.java          # 🆕 模型接入抽象
+│   ├── chat/
+│   │   ├── ConversationManager.java     # 🆕 会话管理
+│   │   ├── MemoryService.java           # 🆕 记忆管理
+│   │   └── ContextProvider.java         # 🆕 页面上下文注入
+│   ├── tool/
+│   │   ├── AiTool.java                  # 🆕 Tool接口定义
+│   │   ├── ToolRegistry.java            # 🆕 Tool注册中心
+│   │   ├── ToolExecutor.java            # 🆕 Tool执行引擎
+│   │   └── tools/                       # 🆕 Tool实现
+│   │       ├── OrderTool.java
+│   │       ├── GoodsTool.java
+│   │       ├── InventoryTool.java
+│   │       ├── RefundTool.java
+│   │       ├── PurchaseTool.java
+│   │       └── ShipTool.java
+│   ├── orchestration/
+│   │   ├── DataResolver.java            # 🆕 阶段三 - 数据解析器接口
+│   │   ├── Orchestrator.java            # 🆕 阶段三 - 编排引擎
+│   │   └── resolvers/                   # 🆕 阶段三 - Resolver实现
+│   ├── alert/
+│   │   ├── AlertScanner.java            # 🆕 阶段四 - 预警扫描
+│   │   └── AlertEnhancer.java           # 🆕 阶段四 - AI增强解读
+│   └── security/
+│       ├── ToolPermissionChecker.java   # 🆕 Tool权限校验
+│       └── ConfirmationFlow.java        # 🆕 用户确认流
 
-vue2/src/
+vue3/src/
 ├── api/ai/
-│   ├── analysis.js                     # ✅ 已有
-│   └── alert.js                        # 🆕 Phase2 - 消息中心API
-├── views/
-│   ├── index.vue                       # ✅ 已有 - AI工作台
-│   ├── ai/
-│   │   ├── chat.vue                    # 🆕 Phase1 - AI对话页
-│   │   ├── analysis.vue                # ✅ 已有
-│   │   └── alert.vue                   # 🆕 Phase2 - 消息中心
-│   └── config.vue                      # ✅ 已有
+│   ├── brief.ts                         # ✅ 已有
+│   ├── config.ts                        # ✅ 已有，连后端
+│   ├── conversation.ts                  # 🆕 对话API
+│   ├── tool.ts                          # 🆕 Tool执行API
+│   └── notification.ts                  # 🆕 通知API
+├── views/ai/
+│   ├── config.vue                       # ✅ 已有
+│   ├── analysis.vue                     # ✅ 已有，连后端
+│   ├── history.vue                      # ✅ 已有，连后端
+│   └── notification/                    # 🆕 通知中心页
+├── components/
+│   ├── AiFloatingChat.vue               # 🆕 AI悬浮浮窗（全局）
+│   ├── AiNotificationBell.vue           # 🆕 顶部通知铃铛
+│   └── AiToolConfirm.vue               # 🆕 操作确认弹窗
+├── composables/
+│   ├── useAiChat.ts                     # 🆕 AI对话组合式函数
+│   └── useNotification.ts              # 🆕 通知组合式函数
 ```
 
 ---
 
-## 七、总结
+## 九、实施路径总览
 
 ```
-现在（已完成）：
-└── 首页 AI 工作台（简报 + 数据 + 待办 + 提问）
-
-下一步（Phase 1）：
-└── AI 对话页（SSE 流式 + 多轮记忆 + 快捷指令）
-
-再下一步（Phase 2）：
-├── 主动预警 + 消息中心（定时扫描 + 角标推送）
-└── AI 写入操作（改状态 + 调库存 + 用户确认）
-
-再下一步（Phase 3）：
-├── NL2SQL 智能查询（自然语言查数据）
-└── Agent 体系拆分
-
-再下一步（Phase 4）：
-├── RAG 系统帮助（操作手册 → 智能问答）
-└── 智能供应链（销量预测 + 补货建议）
+开始
+│
+├── 阶段一：基础设施（1周）
+│   ├── ai_config 表 + CRUD API
+│   └── AiModelService 抽象 + 降级
+│
+├── 阶段二：核心骨架（3-4周）
+│   ├── Tool 注册中心 + 首批 10-15 个 Tool
+│   ├── 对话引擎 + 记忆
+│   ├── AI 悬浮浮窗（SSE 流式）
+│   └── 安全控制（权限 + 确认 + 日志）
+│   │
+│   └── 用户可见：AI 浮窗聊天 + 能查订单/商品/库存 + 能建采购单
+│
+├── 阶段三：编排引擎（2周）
+│   ├── DataResolver 体系
+│   └── 跨表分析场景
+│   │
+│   └── 用户可见：问"为什么退款率高"AI 能分析原因
+│
+├── 阶段四：主动预警（2周）
+│   ├── 定时扫描 + 规则引擎
+│   ├── 通知中心（前端 + 后端）
+│   └── SSE 推送
+│   │
+│   └── 用户可见：系统主动告诉你库存告急/订单超时
+│
+└── 阶段五：高阶能力（按需）
+    ├── 智能供应链
+    ├── RAG 帮助系统
+    ├── NL2SQL
+    └── MCP 开放协议
 ```
 
-每步独立可交付，不依赖前一步即可上线。
+**核心原则：** 每个阶段交付用户能感知的价值，不追求一步到位。

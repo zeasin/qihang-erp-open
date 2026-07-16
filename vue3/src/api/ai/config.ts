@@ -1,26 +1,57 @@
 import request from '@/utils/request'
 
-/** 获取AI配置 */
-export function getAiConfig(systemType: string) {
+export interface AiConfig {
+  id?: number
+  name: string
+  apiEndpoint: string
+  apiKey: string
+  modelName: string
+  isEnabled: number
+  isDefault: number
+  sortOrder: number
+  remark: string
+}
+
+export function listAiConfig() {
   return request({
-    url: `api/erp-api/ai/config/get/${systemType}`,
+    url: 'api/ai/config/list',
     method: 'get'
   })
 }
 
-/** 保存AI配置 */
-export function saveAiConfig(data: Record<string, any>) {
+export function getAiConfig(id: number) {
   return request({
-    url: 'api/erp-api/ai/config/save',
+    url: `api/ai/config/${id}`,
+    method: 'get'
+  })
+}
+
+export function addAiConfig(data: AiConfig) {
+  return request({
+    url: 'api/ai/config',
     method: 'post',
     data
   })
 }
 
-/** 获取AI配置列表 */
-export function getAiConfigList() {
+export function editAiConfig(data: AiConfig) {
   return request({
-    url: 'api/erp-api/ai/config/list',
-    method: 'get'
+    url: 'api/ai/config',
+    method: 'put',
+    data
+  })
+}
+
+export function delAiConfig(id: number) {
+  return request({
+    url: `api/ai/config/${id}`,
+    method: 'delete'
+  })
+}
+
+export function setDefaultAiConfig(id: number) {
+  return request({
+    url: `api/ai/config/${id}/default`,
+    method: 'put'
   })
 }
