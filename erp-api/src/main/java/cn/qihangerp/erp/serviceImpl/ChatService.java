@@ -16,8 +16,11 @@ import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.ai.deepseek.DeepSeekChatOptions;
 import org.springframework.ai.deepseek.api.DeepSeekApi;
 import org.springframework.ai.model.SimpleApiKey;
+import org.springframework.http.client.ReactorClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.netty.http.client.HttpClient;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -49,10 +52,15 @@ public class ChatService {
 
             String baseUrl = config.getApiEndpoint().replaceAll("/v1/?$", "").replaceAll("/+$", "");
 
+            var nettyHttpClient = HttpClient.create()
+                    .responseTimeout(java.time.Duration.ofSeconds(120));
+            var factory = new ReactorClientHttpRequestFactory(nettyHttpClient);
+            factory.setReadTimeout(java.time.Duration.ofSeconds(120));
             DeepSeekApi api = DeepSeekApi.builder()
                     .baseUrl(baseUrl)
                     .apiKey(new SimpleApiKey(config.getApiKey()))
                     .completionsPath("/v1/chat/completions")
+                    .restClientBuilder(RestClient.builder().requestFactory(factory))
                     .build();
 
             DeepSeekChatModel chatModel = DeepSeekChatModel.builder()

@@ -1,5 +1,15 @@
 <template>
   <div class="dashboard">
+    <div class="page-header">
+      <div>
+        <h2>首页</h2>
+      </div>
+      <el-button :loading="loading" @click="loadBrief">
+        <el-icon><Refresh /></el-icon>
+        刷新
+      </el-button>
+    </div>
+
     <el-row :gutter="16">
       <el-col :span="24">
         <div class="ai-header">
@@ -13,7 +23,7 @@
             <div class="ai-trend" v-if="brief.trend">{{ brief.trend }}</div>
             <div class="ai-unavailable" v-if="brief.aiAvailable === false">
               <el-icon><WarningFilled /></el-icon>
-              {{ !brief.summary ? 'AI分析未配置，配置DeepSeek API Key后可获得AI分析' : '' }}
+              前往 <router-link to="/ai/config" class="config-link">模型配置</router-link> 添加并启用大模型，即可获得AI智能分析
             </div>
           </div>
         </div>
@@ -105,7 +115,7 @@
           <div class="welcome-content">
             <svg-icon icon-class="ai" class="welcome-icon" />
             <h2>欢迎使用启航电商ERP系统</h2>
-            <p>配置 DeepSeek API Key 后，AI 助手将为您生成智能工作简报</p>
+            <p>配置大模型后，AI 助手将为您生成智能工作简报</p>
           </div>
         </el-card>
       </el-col>
@@ -117,12 +127,13 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { WarningFilled, ArrowRight } from '@element-plus/icons-vue'
+import { WarningFilled, ArrowRight, Refresh } from '@element-plus/icons-vue'
 import { getAiBrief } from '@/api/ai'
 import type { AiBriefResponse } from '@/api/ai'
 import SvgIcon from '@/components/SvgIcon/index.vue'
 
 const router = useRouter()
+const loading = ref(false)
 const brief = ref<AiBriefResponse>({
   greeting: '',
   summary: '',
@@ -138,22 +149,45 @@ function goLink(link: string) {
   }
 }
 
-onMounted(() => {
-  getAiBrief()
-    .then((res: any) => {
-      if (res.data) {
-        brief.value = res.data
-      }
-    })
-    .catch(() => {
-      ElMessage.error('获取AI简报失败')
-    })
-})
+async function loadBrief() {
+  loading.value = true
+  try {
+    const res = await getAiBrief()
+    if (res.data) {
+      brief.value = res.data
+    }
+  } catch {
+    ElMessage.error('获取AI简报失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadBrief)
 </script>
 
 <style lang="scss" scoped>
 .dashboard {
   padding: 16px;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.page-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.config-link {
+  color: #e6a23c;
+  font-weight: 600;
+  text-decoration: underline;
 }
 
 .ai-header {

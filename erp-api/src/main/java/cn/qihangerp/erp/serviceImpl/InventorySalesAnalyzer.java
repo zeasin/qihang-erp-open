@@ -1,25 +1,21 @@
 package cn.qihangerp.erp.serviceImpl;
 
-import okhttp3.*;
-import tools.jackson.core.type.TypeReference;
-import tools.jackson.databind.ObjectMapper;
-import java.io.IOException;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.deepseek.DeepSeekChatModel;
+import org.springframework.ai.deepseek.DeepSeekChatOptions;
+import org.springframework.ai.deepseek.api.DeepSeekApi;
+import org.springframework.ai.model.SimpleApiKey;
+
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.time.LocalDateTime;
 
 public class InventorySalesAnalyzer {
 
-    // 配置你的 DeepSeek API 信息
-    private static final String API_KEY = "sk-e1f3aecc45e44eca9451d5a659a4bc91";
-    private static final String API_URL = "https://api.deepseek.com/v1/chat/completions";
-
-    private static final MediaType JSON = MediaType.get("application/json; charset=utf-8");
-    private static final OkHttpClient client = new OkHttpClient.Builder()
-            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
-            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
-            .build();
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private static final String API_KEY = System.getProperty("spring.ai.deepseek.api-key", "");
+    private static final String API_URL = System.getProperty("spring.ai.deepseek.base-url", "https://api.deepseek.com");
+    private static final String MODEL = System.getProperty("spring.ai.deepseek.model", "deepseek-chat");
 
     // 你的数据
     private static final String INVENTORY_JSON = "[{\"id\":1,\"goods_title\":\"雷士照明led吸顶灯灯芯替换圆形灯板节能灯芯冷光高显护眼健康\",\"sku_name\":\"白光12W\",\"stock_num\":12},{\"id\":2,\"goods_title\":\"雷士照明led吸顶灯灯芯替换圆形灯板节能灯芯冷光高显护眼健康\",\"sku_name\":\"白光18W\",\"stock_num\":12},{\"id\":3,\"goods_title\":\"雷士照明led吸顶灯灯芯替换圆形灯板节能灯芯冷光高显护眼健康\",\"sku_name\":\"白光24W\",\"stock_num\":12},{\"id\":4,\"goods_title\":\"雷士照明led吸顶灯灯芯替换圆形灯板节能灯芯冷光高显护眼健康\",\"sku_name\":\"双色36W\",\"stock_num\":12}]";
@@ -49,7 +45,7 @@ public class InventorySalesAnalyzer {
      * 核心分析方法
      */
     public static String analyzeInventoryAndSales(List<InventoryItem> inventory,
-                                                  List<SalesOrder> sales) throws IOException {
+                                                  List<SalesOrder> sales) throws Exception {
 
         // 1. 数据预处理：按 SKU ID 关联库存和销售数据
         Map<Integer, SkuAnalysis> analysisMap = new HashMap<>();
@@ -96,8 +92,38 @@ public class InventorySalesAnalyzer {
         // 3. 构建 AI 分析提示词
         String prompt = buildAnalysisPrompt(analysisMap);
 
-        // 4. 调用 DeepSeek API
-        return callDeepSeekAPI(prompt);
+        // 4. 调用 DeepSeek API（Spring AI 2.0）
+        return callAi(prompt);
+    }
+
+    /**
+     * 使用 Spring AI 2.0 调用大模型
+     */
+    private static String callAi(String prompt) throws Exception {
+        // 构建 DeepSeekApi
+        String baseUrl = API_URL.replaceAll("/v1/?$", "").replaceAll("/+$", "");
+        DeepSeekApi api = DeepSeekApi.builder()
+                .baseUrl(baseUrl)
+                .apiKey(new SimpleApiKey(API_KEY))
+                .completionsPath("/v1/chat/completions")
+                .build();
+
+        // 构建 ChatModel
+        DeepSeekChatModel chatModel = DeepSeekChatModel.builder()
+                .deepSeekApi(api)
+                .options(DeepSeekChatOptions.builder()
+                        .model(MODEL)
+                        .temperature(0.3)
+                        .maxTokens(2000)
+                        .build())
+                .build();
+
+        // 构建 ChatClient 并发起调用
+        ChatClient chatClient = ChatClient.builder(chatModel).build();
+        return chatClient.prompt()
+                .user(prompt)
+                .call()
+                .content();
     }
 
     /**
@@ -145,69 +171,6 @@ public class InventorySalesAnalyzer {
     }
 
     /**
-     * 调用 DeepSeek API
-     */
-    private static String callDeepSeekAPI(String prompt) throws IOException {
-        // 构建请求体
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", "deepseek-chat");
-        requestBody.put("messages", Arrays.asList(
-                Map.of("role", "user", "content", prompt)
-        ));
-        requestBody.put("temperature", 0.3);  // 降低随机性，使分析更稳定
-        requestBody.put("max_tokens", 2000);
-
-        String jsonBody = objectMapper.writeValueAsString(requestBody);
-
-        // 创建请求
-        Request request = new Request.Builder()
-                .url(API_URL)
-                .header("Authorization", "Bearer " + API_KEY)
-                .header("Content-Type", "application/json")
-                .post(RequestBody.create(jsonBody, JSON))
-                .build();
-
-        // 发送请求（带重试机制）
-        for (int attempt = 0; attempt < 3; attempt++) {
-            try (Response response = client.newCall(request).execute()) {
-                if (response.isSuccessful()) {
-                    String responseBody = response.body().string();
-                    return extractContentFromResponse(responseBody);
-                } else if (response.code() == 429 || response.code() >= 500) {
-                    // 频率限制或服务器错误，等待后重试
-                    System.out.println("请求失败，状态码: " + response.code() + "，等待重试...");
-                    Thread.sleep(2000 * (attempt + 1));
-                    continue;
-                } else {
-                    throw new IOException("API请求失败: " + response.code() + " - " + response.message());
-                }
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IOException("请求被中断", e);
-            }
-        }
-
-        throw new IOException("API请求失败，已重试3次");
-    }
-
-    /**
-     * 从 API 响应中提取内容
-     */
-    private static String extractContentFromResponse(String responseBody) throws IOException {
-        Map<String, Object> responseMap = objectMapper.readValue(responseBody,
-                new TypeReference<Map<String, Object>>() {});
-
-        List<Map<String, Object>> choices = (List<Map<String, Object>>) responseMap.get("choices");
-        if (choices != null && !choices.isEmpty()) {
-            Map<String, Object> choice = choices.get(0);
-            Map<String, Object> message = (Map<String, Object>) choice.get("message");
-            return (String) message.get("content");
-        }
-
-        return "未获取到有效回复";
-    }
-
-    /**
      * 判断库存状态
      */
     private static String determineStockStatus(int stock, double dailySales) {
@@ -224,22 +187,44 @@ public class InventorySalesAnalyzer {
     }
 
     // 数据解析方法
-    private static List<InventoryItem> parseInventoryData() throws IOException {
-        return objectMapper.readValue(INVENTORY_JSON,
-                new TypeReference<List<InventoryItem>>() {});
+    private static List<InventoryItem> parseInventoryData() {
+        return Arrays.asList(
+                new InventoryItem(1, "雷士照明led吸顶灯灯芯替换圆形灯板节能灯芯冷光高显护眼健康", "白光12W", 12),
+                new InventoryItem(2, "雷士照明led吸顶灯灯芯替换圆形灯板节能灯芯冷光高显护眼健康", "白光18W", 12),
+                new InventoryItem(3, "雷士照明led吸顶灯灯芯替换圆形灯板节能灯芯冷光高显护眼健康", "白光24W", 12),
+                new InventoryItem(4, "雷士照明led吸顶灯灯芯替换圆形灯板节能灯芯冷光高显护眼健康", "双色36W", 12)
+        );
     }
 
-    private static List<SalesOrder> parseSalesData() throws IOException {
-        return objectMapper.readValue(SALES_JSON,
-                new TypeReference<List<SalesOrder>>() {});
+    private static List<SalesOrder> parseSalesData() {
+        return Arrays.asList(
+                new SalesOrder("1", 1, 1, 29.32, "2025-05-24 23:19:51"),
+                new SalesOrder("1", 3, 1, 29.32, "2025-05-24 23:19:51"),
+                new SalesOrder("1", 1, 1, 29.32, "2025-05-24 23:19:51"),
+                new SalesOrder("1", 2, 1, 29.32, "2025-05-24 23:19:51"),
+                new SalesOrder("1", 4, 1, 29.32, "2025-05-24 23:19:51"),
+                new SalesOrder("1", 1, 1, 29.32, "2025-05-24 23:19:51"),
+                new SalesOrder("1", 1, 1, 29.32, "2025-05-24 23:19:51"),
+                new SalesOrder("1", 3, 1, 29.32, "2025-05-24 23:19:51"),
+                new SalesOrder("1", 1, 1, 29.32, "2025-05-24 23:19:51"),
+                new SalesOrder("1", 1, 1, 29.32, "2025-05-24 23:19:51"),
+                new SalesOrder("1", 2, 1, 29.32, "2025-05-24 23:19:51")
+        );
     }
 
-    // 数据类定义（字段名与 JSON key 一致，无需 @JsonProperty）
+    // 数据类定义
     static class InventoryItem {
         public int id;
         public String goods_title;
         public String sku_name;
         public int stock_num;
+
+        public InventoryItem(int id, String goods_title, String sku_name, int stock_num) {
+            this.id = id;
+            this.goods_title = goods_title;
+            this.sku_name = sku_name;
+            this.stock_num = stock_num;
+        }
     }
 
     static class SalesOrder {
@@ -248,6 +233,14 @@ public class InventorySalesAnalyzer {
         public int count;
         public double item_amount;
         public String order_time;
+
+        public SalesOrder(String order_num, int sku_id, int count, double item_amount, String order_time) {
+            this.order_num = order_num;
+            this.sku_id = sku_id;
+            this.count = count;
+            this.item_amount = item_amount;
+            this.order_time = order_time;
+        }
     }
 
     static class SkuAnalysis {

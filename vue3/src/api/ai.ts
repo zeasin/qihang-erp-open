@@ -31,5 +31,6 @@ export function getAiBrief() {
   return request({
     url: '/api/ai/brief',
     method: 'get',
+    timeout: 45000,
   })
 }
