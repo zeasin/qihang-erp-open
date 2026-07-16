@@ -135,10 +135,10 @@
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Search, Refresh, Plus, ArrowUp, Delete } from '@element-plus/icons-vue'
-import { listGoods, getGoodsItem, addGoodsItem, delGoodsSpec, updateGoodsStatus, linkGoodsFromLibrary } from '@/api/goods/supplierGoods'
+import { listGoods, getGoodsItem, delGoodsSpec, updateGoodsStatus, linkGoodsFromLibrary } from '@/api/goods/supplierGoods'
 import { listCategory } from '@/api/goods/category'
 import { listSupplier } from '@/api/goods/supplier'
-import { listGoods as listErpGoods } from '@/api/goods/goods'
+import { listGoods as listErpGoods, searchSku } from '@/api/goods/goods'
 import { parseTime, amountFormatter } from '@/utils/zhijian'
 import Pagination from '@/components/Pagination/index.vue'
 import RightToolbar from '@/components/RightToolbar/index.vue'
@@ -188,12 +188,10 @@ function selectSpu(row:any){
   selectedSpu.value=row
   skuLoading.value=true
   // 使用searchSku加载该goods下的所有SKU
-  import('@/api/goods/goods').then(({searchSku})=>{
-    searchSku({goodsId:row.id,pageSize:200}).then((res:any)=>{
-      spuSkuList.value=(res.rows||[]).map((s:any)=>({...s,supplierPrice:s.purPrice||0}))
-      selectedSkus.value=[];skuLoading.value=false;step1Open.value=false;step2Open.value=true
-    }).catch(()=>{skuLoading.value=false})
-  })
+  searchSku({goodsId:row.id,pageSize:200}).then((res:any)=>{
+    spuSkuList.value=(res.rows||[]).map((s:any)=>({...s,supplierPrice:s.purPrice||0}))
+    selectedSkus.value=[];skuLoading.value=false;step1Open.value=false;step2Open.value=true
+  }).catch(()=>{skuLoading.value=false})
 }
 
 function handleSkuSelect(selection:any[]){selectedSkus.value=selection}

@@ -77,6 +77,7 @@ import { ElMessage } from 'element-plus'
 import type { FormInstance } from 'element-plus'
 import { listAllSupplier } from '@/api/goods/supplier'
 import { addPurchaseOrder } from '@/api/purchase/purchaseOrder'
+import { searchSku } from '@/api/goods/goods'
 import { limitDecimalLength, stringToNumber } from '@/utils/numberInput'
 import PopupSkuList from '@/views/goods/PopupSkuList.vue'
 import ImagePreview from '@/components/ImagePreview/index.vue'
@@ -146,20 +147,18 @@ function handleDataFromPopup(data: any) {
   if (selectedSupplierId.value && data?.length > 0) {
     const skuIds = data.map((d: any) => d.id).filter(Boolean)
     if (skuIds.length > 0) {
-      import('@/api/goods/goods').then(({ searchSku }) => {
-        searchSku({ supplierId: selectedSupplierId.value, ids: skuIds.join(','), pageSize: 200 }).then((res: any) => {
-          const supplierPrices = (res.rows || []).reduce((map: any, sku: any) => {
-            if (sku.supplierPrice) map[sku.skuId || sku.id] = sku.supplierPrice
-            return map
-          }, {})
-          form.goodsList.forEach((item: any) => {
-            const sid = item.skuId || item.id
-            if (supplierPrices[sid]) {
-              item.purPrice = supplierPrices[sid]
-            }
-          })
-          calcAmount()
+      searchSku({ supplierId: selectedSupplierId.value, ids: skuIds.join(','), pageSize: 200 }).then((res: any) => {
+        const supplierPrices = (res.rows || []).reduce((map: any, sku: any) => {
+          if (sku.supplierPrice) map[sku.skuId || sku.id] = sku.supplierPrice
+          return map
+        }, {})
+        form.goodsList.forEach((item: any) => {
+          const sid = item.skuId || item.id
+          if (supplierPrices[sid]) {
+            item.purPrice = supplierPrices[sid]
+          }
         })
+        calcAmount()
       })
     }
   }

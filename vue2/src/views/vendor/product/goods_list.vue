@@ -133,7 +133,7 @@
 </template>
 
 <script>
-import { listGoods, getGoodsItem, addGoodsItem, delGoodsSpec, updateGoodsStatus, linkGoodsFromLibrary } from "@/api/goods/supplier_goods";
+import { listGoods, getGoodsItem, delGoodsSpec, updateGoodsStatus, linkGoodsFromLibrary } from "@/api/goods/supplier_goods";
 import Treeselect from '@riophae/vue-treeselect'
 import '@riophae/vue-treeselect/dist/vue-treeselect.css'
 import { listCategory } from "@/api/goods/category";
