@@ -211,7 +211,7 @@ graph TD
 
 本项目后端采用`Spring Boot 4.1` + `Spring AI 2.0` 架构开发。
 
-前端采用`Vue2`+`ElementUI`开发（`vue2/` 为升级版前端）
+前端采用`Vue3`+`TypeScript`+`Element Plus`开发（`vue3/` 为新版前端，`vue2/` 为旧版前端）
 
 + 后端核心技术栈
   + **Spring Boot 4.1.0** — 最新稳定版，基于 Spring Framework 7.x
@@ -388,12 +388,14 @@ java -jar erp-api/target/erp-api.jar
 
 #### 3.4、运行前端
 + Nodejs版本：v20.20.0
-+ 进入`vue2`文件夹
++ 进入`vue3`文件夹（新版前端，Vue3 + TypeScript + Vite）
 + 运行`npm install`
 + 运行`npm run dev`
-+ 浏览网页（默认端口 88，也可通过环境变量 `port=1024` 指定）
++ 浏览网页（默认端口 88）
 + 登录账号：`admin`
 + 登录密码：`QHerp@23`
+
+> 旧版前端（Vue2 + ElementUI）位于 `vue2/` 目录，仍可使用，后续将逐步迁移到 `vue3/`。
 
 #### 3.5、SSE 实时消息推送
 系统支持 SSE（Server-Sent Events）实时推送新订单等通知。
@@ -424,8 +426,8 @@ location /prod-api/ {
 
 ##### 前端打包
 ```bash
-cd vue2     # vue/ 为旧版前端已过时，请使用 vue2/
-npm run build:prod
+cd vue3     # 新版前端（Vue3），vue2/ 为旧版前端
+npm run build
 ```
 
 #### 4.2 部署
