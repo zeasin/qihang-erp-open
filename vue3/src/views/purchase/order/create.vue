@@ -119,12 +119,7 @@ function getDate() {
 }
 
 function qtyChange() {
-  form.orderAmount = 0
-  if (form.goodsList && form.goodsList.length > 0) {
-    form.goodsList.forEach((item: any) => {
-      form.orderAmount += (item.quantity || 0) * (item.purPrice || 0)
-    })
-  }
+  calcAmount()
 }
 
 function addGoodsDialog() {
@@ -168,20 +163,15 @@ function handleDataFromPopup(data: any) {
 function calcAmount() {
   let goodsAmount = 0
   form.goodsList.forEach((item: any) => {
-    item.itemAmount = (item.quantity || 1) * (item.purPrice || 0)
+    item.itemAmount = Math.round((item.quantity || 1) * (item.purPrice || 0) * 100) / 100
     goodsAmount += item.itemAmount
   })
-  form.orderAmount = goodsAmount
+  form.orderAmount = Math.round(goodsAmount * 100) / 100
 }
 
 function handleDeleteSku(index: number, row: any) {
   form.goodsList.splice(index, 1)
-  form.orderAmount = 0
-  if (form.goodsList && form.goodsList.length > 0) {
-    form.goodsList.forEach((item: any) => {
-      form.orderAmount += (item.quantity || 0) * (item.purPrice || 0)
-    })
-  }
+  calcAmount()
 }
 
 function cancel() {

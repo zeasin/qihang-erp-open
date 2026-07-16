@@ -44,6 +44,11 @@
       <el-table-column label="创建时间" align="center" prop="createTime" width="160">
         <template #default="scope">{{ parseTime(scope.row.createTime) }}</template>
       </el-table-column>
+      <el-table-column label="操作" align="center" width="80">
+        <template #default="scope">
+          <el-button size="small" type="text" @click="handleDelete(scope.row)"><el-icon><Delete /></el-icon>删除</el-button>
+        </template>
+      </el-table-column>
     </el-table>
 
     <pagination v-show="total>0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
@@ -53,11 +58,13 @@
 <script setup lang="ts">
 import { ref, reactive, onMounted } from 'vue'
 import { Search, Refresh } from '@element-plus/icons-vue'
-import { listSupplierSku } from '@/api/goods/supplierGoods'
+import { listSupplierSku, delSupplierSku } from '@/api/goods/supplierGoods'
 import { listSupplier } from '@/api/goods/supplier'
 import { parseTime, amountFormatter } from '@/utils/zhijian'
 import Pagination from '@/components/Pagination/index.vue'
 import RightToolbar from '@/components/RightToolbar/index.vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Delete } from '@element-plus/icons-vue'
 
 const loading=ref(true);const showSearch=ref(true);const total=ref(0)
 const skuList=ref<any[]>([]);const supplierList=ref<any[]>([])
@@ -66,5 +73,8 @@ const queryParams=reactive({pageNum:1,pageSize:10,skuCode:null as string|null,pr
 function getList(){loading.value=true;listSupplierSku(queryParams).then((res:any)=>{skuList.value=res.rows||[];total.value=res.total||0;loading.value=false}).catch(()=>{loading.value=false})}
 function handleQuery(){queryParams.pageNum=1;getList()}
 function resetQuery(){queryParams.skuCode=null;queryParams.productName=null;queryParams.supplierId=null;queryParams.status=null;handleQuery()}
+function handleDelete(row:any){
+  ElMessageBox.confirm('确认删除该SKU及其报价记录？').then(()=>delSupplierSku(row.id)).then(()=>{ElMessage.success('删除成功');getList()}).catch(()=>{})
+}
 onMounted(()=>{listSupplier({pageSize:100}).then((res:any)=>{supplierList.value=res.rows||[]});getList()})
 </script>

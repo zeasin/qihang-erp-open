@@ -59,7 +59,17 @@ export function listSupplierSku(query?: Record<string, any>) {
   return request({ url: '/api/erp-api/supplier/goods_sku/list', method: 'get', params: query })
 }
 
+/** 删除供应商SKU（含报价记录） */
+export function delSupplierSku(id: number | string) {
+  return request({ url: '/api/erp-api/supplier/goods_sku/del/' + id, method: 'delete' })
+}
+
 /** 供应商报价列表 */
 export function listSupplierPrice(query?: Record<string, any>) {
   return request({ url: '/api/erp-api/supplier/price/list', method: 'get', params: query })
+}
+
+/** 保存供应商报价（更新SKU最新价+新增报价记录） */
+export function saveSupplierPrice(data: Record<string, any>) {
+  return request({ url: '/api/erp-api/supplier/price/savePrice', method: 'post', data })
 }

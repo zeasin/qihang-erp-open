@@ -3,11 +3,18 @@ package cn.qihangerp.erp.controller.erp;
 import cn.qihangerp.common.AjaxResult;
 import cn.qihangerp.common.PageQuery;
 import cn.qihangerp.common.TableDataInfo;
+import cn.qihangerp.model.bo.SupplierPriceSaveBo;
 import cn.qihangerp.model.entity.ErpSupplierGoodsPrice;
+import cn.qihangerp.model.entity.ErpSupplierProductItem;
+import cn.qihangerp.mapper.ErpSupplierProductItemMapper;
 import cn.qihangerp.security.common.BaseController;
 import cn.qihangerp.service.ErpSupplierGoodsPriceService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 供应商报价管理
@@ -18,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 public class SupplierPriceController extends BaseController {
 
     private final ErpSupplierGoodsPriceService supplierGoodsPriceService;
+    private final ErpSupplierProductItemMapper supplierProductItemMapper;
 
     /**
      * 分页查询供应商报价列表
@@ -62,5 +70,51 @@ public class SupplierPriceController extends BaseController {
     @DeleteMapping("/del/{id}")
     public AjaxResult remove(@PathVariable Long id) {
         return toAjax(supplierGoodsPriceService.removeById(id));
+    }
+
+    /**
+     * 保存供应商报价（更新SKU最新价+新增报价记录）
+     */
+    @PostMapping("/savePrice")
+    public AjaxResult savePrice(@RequestBody SupplierPriceSaveBo bo) {
+        if (bo.getSupplierId() == null) return error("供应商ID不能为空");
+        if (bo.getSkus() == null || bo.getSkus().isEmpty()) return error("请至少设置一个SKU价格");
+
+        for (var sku : bo.getSkus()) {
+            if (sku.getSkuItemId() == null && sku.getErpSkuId() == null) continue;
+
+            // 查找供应商SKU记录
+            LambdaQueryWrapper<ErpSupplierProductItem> qw = new LambdaQueryWrapper<>();
+            qw.eq(ErpSupplierProductItem::getSupplierId, bo.getSupplierId());
+            if (sku.getSkuItemId() != null) {
+                qw.eq(ErpSupplierProductItem::getId, sku.getSkuItemId());
+            } else {
+                qw.eq(ErpSupplierProductItem::getErpGoodsSkuId, sku.getErpSkuId());
+            }
+            ErpSupplierProductItem item = supplierProductItemMapper.selectOne(qw);
+            if (item == null) continue;
+
+            // 更新SKU最新价
+            ErpSupplierProductItem update = new ErpSupplierProductItem();
+            update.setId(item.getId());
+            update.setPrice(sku.getPrice());
+            update.setUpdateBy(getUsername());
+            update.setUpdateTime(LocalDateTime.now());
+            supplierProductItemMapper.updateById(update);
+
+            // 新增报价记录
+            ErpSupplierGoodsPrice priceRecord = new ErpSupplierGoodsPrice();
+            priceRecord.setSupplierId(bo.getSupplierId());
+            priceRecord.setSupplierProductId(item.getSupplierProductId());
+            priceRecord.setSupplierProductItemId(item.getId());
+            priceRecord.setSkuCode(item.getSkuCode());
+            priceRecord.setPrice(sku.getPrice());
+            priceRecord.setMerchantId(0L);
+            priceRecord.setStatus(1);
+            priceRecord.setCreateBy(getUsername());
+            priceRecord.setCreateTime(LocalDateTime.now());
+            supplierGoodsPriceService.save(priceRecord);
+        }
+        return success();
     }
 }

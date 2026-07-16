@@ -44,13 +44,18 @@
       <el-table-column label="创建时间" align="center" prop="createTime" width="160">
         <template slot-scope="scope">{{ parseTime(scope.row.createTime) }}</template>
       </el-table-column>
+      <el-table-column label="操作" align="center" width="80">
+        <template slot-scope="scope">
+          <el-button size="small" type="text" icon="el-icon-delete" @click="handleDelete(scope.row)">删除</el-button>
+        </template>
+      </el-table-column>
     </el-table>
     <pagination v-show="total>0" :total="total" :page.sync="queryParams.pageNum" :limit.sync="queryParams.pageSize" @pagination="getList" />
   </div>
 </template>
 
 <script>
-import { listSupplierSku } from "@/api/goods/supplier_goods";
+import { listSupplierSku, delSupplierSku } from "@/api/goods/supplier_goods";
 import { listSupplier } from "@/api/goods/supplier";
 export default {
   data() {
@@ -63,6 +68,7 @@ export default {
     handleQuery() { this.queryParams.pageNum = 1; this.getList(); },
     resetQuery() { this.resetForm("queryForm"); this.handleQuery(); },
     amountFormatter(r, c, v, i) { if(!v)return''; return '¥' + parseFloat(v).toFixed(2).replace(/\d(?=(\d{3})+\.)/g,'$&,'); },
+    handleDelete(row) { this.$confirm('确认删除该SKU及其报价记录？').then(() => delSupplierSku(row.id)).then(() => { this.$msg.success('删除成功'); this.getList(); }).catch(() => {}); },
   }
 };
 </script>

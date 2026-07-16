@@ -110,8 +110,8 @@ export default {
     loadGoods() { this.goodsLoading = true; listGoods({pageSize:20,name:this.addKeyword||undefined}).then(r => { this.goodsList = r.rows||[]; this.goodsLoading = false; }); },
     selectGoods(row) { if(!this.addSupplierId){this.$message.warning('请先选择供应商');return}
       this.selectedGoods = row;
-      searchSku({goodsId:row.id,pageSize:200}).then(r=>{
-        this.skuPriceList = (r.rows||[]).map(s=>({...s,price:s.purPrice||0}));
+      searchSku({goodsId:row.id,supplierId:this.addSupplierId,pageSize:200}).then(r=>{
+        this.skuPriceList = (r.rows||[]).map(s=>({...s,price:s.supplierPrice||s.purPrice||0}));
         this.addOpen = false; this.priceOpen = true;
       });
     },

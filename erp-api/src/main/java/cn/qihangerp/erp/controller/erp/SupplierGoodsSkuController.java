@@ -3,7 +3,9 @@ package cn.qihangerp.erp.controller.erp;
 import cn.qihangerp.common.AjaxResult;
 import cn.qihangerp.common.PageQuery;
 import cn.qihangerp.common.TableDataInfo;
+import cn.qihangerp.model.entity.ErpSupplierGoodsPrice;
 import cn.qihangerp.model.entity.ErpSupplierProductItem;
+import cn.qihangerp.mapper.ErpSupplierGoodsPriceMapper;
 import cn.qihangerp.security.common.BaseController;
 import cn.qihangerp.service.ErpSupplierProductItemService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class SupplierGoodsSkuController extends BaseController {
 
     private final ErpSupplierProductItemService supplierProductItemService;
+    private final ErpSupplierGoodsPriceMapper supplierGoodsPriceMapper;
 
     /**
      * 分页查询供应商商品SKU列表
@@ -46,10 +49,14 @@ public class SupplierGoodsSkuController extends BaseController {
     }
 
     /**
-     * 删除供应商商品SKU
+     * 删除供应商商品SKU（同时删除关联的报价记录）
      */
     @DeleteMapping("/del/{id}")
     public AjaxResult remove(@PathVariable Long id) {
+        // 先删除报价记录
+        supplierGoodsPriceMapper.delete(new LambdaQueryWrapper<ErpSupplierGoodsPrice>()
+                .eq(ErpSupplierGoodsPrice::getSupplierProductItemId, id));
+        // 再删除SKU
         return toAjax(supplierProductItemService.removeById(id));
     }
 

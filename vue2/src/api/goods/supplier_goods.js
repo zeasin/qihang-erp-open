@@ -42,6 +42,13 @@ export function listSupplierSku(query) {
   })
 }
 
+export function delSupplierSku(id) {
+  return request({
+    url: '/api/erp-api/supplier/goods_sku/del/' + id,
+    method: 'delete'
+  })
+}
+
 export function listSupplierPrice(query) {
   return request({
     url: '/api/erp-api/supplier/price/list',
