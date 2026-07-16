@@ -130,6 +130,11 @@
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-client-chat</artifactId>
         </dependency>
+        <!-- OpenAI 通用模型（兼容 DeepSeek/阿里云百炼/OpenAI/Ollama 等 OpenAI 格式 API） -->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-openai</artifactId>
+        </dependency>
         <!-- JSON-B 实现（Spring AI 依赖 Jakarta JSON-B） -->
         <dependency>
             <groupId>org.eclipse</groupId>
