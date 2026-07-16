@@ -52,12 +52,20 @@ public class ErpSupplierProductServiceImpl extends ServiceImpl<ErpSupplierProduc
         Page<ErpSupplierProduct> page = pageQuery.build();
         this.page(page, queryWrapper);
 
-        // 为每个商品设置SKU数量
+        // 为每个商品设置SKU数量和供应商名称
         if (page.getRecords() != null && !page.getRecords().isEmpty()) {
             for (ErpSupplierProduct product : page.getRecords()) {
                 Long skuCount = itemMapper.selectCount(new LambdaQueryWrapper<ErpSupplierProductItem>()
                         .eq(ErpSupplierProductItem::getSupplierProductId, product.getId()));
                 product.setSkuCount(skuCount.intValue());
+
+                // 查询供应商名称
+                if (product.getSupplierId() != null) {
+                    var supplier = supplierService.getById(product.getSupplierId());
+                    if (supplier != null) {
+                        product.setSupplierName(supplier.getName());
+                    }
+                }
             }
         }
 

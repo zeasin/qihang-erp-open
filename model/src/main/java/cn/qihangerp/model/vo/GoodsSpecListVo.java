@@ -26,4 +26,7 @@ public class GoodsSpecListVo {
     private BigDecimal retailPrice;
     private BigDecimal purPrice;
 
+    /** 供应商报价（当传入supplierId时返回） */
+    private BigDecimal supplierPrice;
+
 }

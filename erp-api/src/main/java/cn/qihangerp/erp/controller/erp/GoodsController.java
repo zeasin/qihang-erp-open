@@ -3,6 +3,7 @@ package cn.qihangerp.erp.controller.erp;
 import cn.qihangerp.common.*;
 import cn.qihangerp.model.entity.OGoods;
 import cn.qihangerp.model.entity.OGoodsSku;
+import cn.qihangerp.model.entity.ErpSupplierProductItem;
 import cn.qihangerp.model.bo.GoodsAddBo;
 import cn.qihangerp.model.query.GoodsQuery;
 import cn.qihangerp.model.query.GoodsSkuQuery;
@@ -10,6 +11,8 @@ import cn.qihangerp.model.vo.GoodsSpecListVo;
 import cn.qihangerp.security.common.BaseController;
 import cn.qihangerp.service.OGoodsService;
 import cn.qihangerp.service.OGoodsSkuService;
+import cn.qihangerp.mapper.ErpSupplierProductItemMapper;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.AllArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.StringUtils;
@@ -30,19 +33,37 @@ public class GoodsController extends BaseController
 {
     private final OGoodsService goodsService;
     private final OGoodsSkuService skuService;
+    private final ErpSupplierProductItemMapper supplierProductItemMapper;
 
     /**
      * 搜索商品SKU
      * 条件：商品编码、SKU、商品名称
      */
     @GetMapping("/searchSku")
-    public TableDataInfo searchSkuBy(Long goodsId,String keyword)
+    public TableDataInfo searchSkuBy(Long goodsId, String keyword, Long supplierId)
     {
         if(goodsId!=null&&goodsId>0){
             List<OGoodsSku> oGoodsSkus = goodsService.querySkuByGoodsId(goodsId);
             return getDataTable(oGoodsSkus);
         }else {
             List<GoodsSpecListVo> list = goodsService.searchGoodsSpec(keyword);
+            // 如果有供应商ID，查询供应商价格
+            if (supplierId != null && list != null && !list.isEmpty()) {
+                for (GoodsSpecListVo vo : list) {
+                    if (vo.getSkuId() != null) {
+                        try {
+                            Long skuIdLong = Long.parseLong(vo.getSkuId());
+                            var item = supplierProductItemMapper.selectOne(new LambdaQueryWrapper<ErpSupplierProductItem>()
+                                    .eq(ErpSupplierProductItem::getSupplierId, supplierId)
+                                    .eq(ErpSupplierProductItem::getErpGoodsSkuId, skuIdLong)
+                                    .last("LIMIT 1"));
+                            if (item != null && item.getPrice() != null) {
+                                vo.setSupplierPrice(item.getPrice());
+                            }
+                        } catch (NumberFormatException ignored) {}
+                    }
+                }
+            }
             return getDataTable(list);
         }
     }

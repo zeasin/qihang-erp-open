@@ -10,6 +10,11 @@
       <el-form-item label="商品分类" prop="categoryId">
         <treeselect :options="categoryTree" placeholder="请选择商品分类" v-model="queryParams.categoryId" style="width: 230px;" />
       </el-form-item>
+      <el-form-item label="供应商" prop="supplierId">
+        <el-select v-model="queryParams.supplierId" placeholder="请选择供应商" filterable clearable @change="handleQuery" style="width:200px">
+          <el-option v-for="item in supplierList" :key="item.id" :label="item.name" :value="item.id" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" filterable clearable placeholder="状态" @change="handleQuery">
           <el-option label="销售中" :value="1" /><el-option label="已下架" :value="2" />
@@ -143,7 +148,7 @@ export default {
       loading: true, showSearch: true, total: 0,
       goodsList: [], categoryList: [], categoryTree: [], supplierList: [],
       skuOpen: false, skuList: [],
-      queryParams: { pageNum: 1, pageSize: 10, productName: null, productNum: null, categoryId: null, status: null },
+      queryParams: { pageNum: 1, pageSize: 10, productName: null, productNum: null, categoryId: null, supplierId: null, status: null },
       // 步骤1
       step1Open: false, spuLoading: false, spuTotal: 0, spuPage: 1, spuPageSize: 10,
       spuList: [], spuKeyword: '', selectSupplierId: null, selectedSpu: null,

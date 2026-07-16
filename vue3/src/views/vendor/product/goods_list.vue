@@ -12,6 +12,11 @@
           <el-option v-for="item in categoryTree" :key="item.id" :label="item.name" :value="item.id" />
         </el-select>
       </el-form-item>
+      <el-form-item label="供应商" prop="supplierId">
+        <el-select v-model="queryParams.supplierId" placeholder="请选择供应商" filterable clearable @change="handleQuery" style="width:200px">
+          <el-option v-for="item in supplierList" :key="item.id" :label="item.name" :value="item.id" />
+        </el-select>
+      </el-form-item>
       <el-form-item label="状态" prop="status">
         <el-select v-model="queryParams.status" clearable placeholder="状态" @change="handleQuery">
           <el-option label="销售中" :value="1" /><el-option label="已下架" :value="2" />
@@ -152,7 +157,7 @@ const selectedSpu=ref<any>(null)
 const step2Open=ref(false);const skuLoading=ref(false)
 const spuSkuList=ref<any[]>([]);const selectedSkus=ref<any[]>([])
 
-const queryParams=reactive({pageNum:1,pageSize:10,productName:null as string|null,productNum:null as string|null,categoryId:null as number|null,status:null as number|null})
+const queryParams=reactive({pageNum:1,pageSize:10,productName:null as string|null,productNum:null as string|null,categoryId:null as number|null,supplierId:null as number|null,status:null as number|null})
 
 function getList(){loading.value=true;listGoods(queryParams).then((res:any)=>{goodsList.value=res.rows||[];total.value=res.total||0;loading.value=false}).catch(()=>{loading.value=false})}
 function handleQuery(){queryParams.pageNum=1;getList()}

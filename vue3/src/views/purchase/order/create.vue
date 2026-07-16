@@ -2,7 +2,7 @@
   <div class="app-container">
     <el-form ref="formRef" :model="form" size="small" :rules="rules" :inline="true" label-width="98px">
       <el-form-item label="供应商" prop="contactId">
-        <el-select v-model="form.contactId" filterable placeholder="请选择供应商名称">
+        <el-select v-model="form.contactId" filterable placeholder="请选择供应商名称" @change="supplierChange">
           <el-option v-for="item in supplierList" :key="item.id" :label="item.name" :value="item.id" />
         </el-select>
       </el-form-item>
@@ -14,7 +14,8 @@
       <el-row>
         <el-form-item label="采购商品：" prop="goodsList">
           <el-col :span="24">
-            <el-button size="small" @click="addGoodsDialog">添加商品</el-button>
+            <el-button size="small" :disabled="!form.contactId" @click="addGoodsDialog">添加商品</el-button>
+            <span v-if="!form.contactId" style="color:#909399;font-size:12px;margin-left:8px">请先选择供应商</span>
           </el-col>
         </el-form-item>
 
@@ -65,7 +66,7 @@
       </el-form-item>
     </el-form>
 
-    <PopupSkuList @data-from-select="handleDataFromPopup" :btn="1" ref="popupRef" />
+    <PopupSkuList @data-from-select="handleDataFromPopup" :btn="1" :supplier-id="selectedSupplierId" ref="popupRef" />
   </div>
 </template>
 
@@ -98,6 +99,13 @@ const rules = reactive<Record<string, any>>({
 })
 
 const supplierList = ref<any[]>([])
+const selectedSupplierId = ref<number|null>(null)
+
+function supplierChange(val: number) {
+  selectedSupplierId.value = val
+  form.goodsList = []
+  form.orderAmount = 0
+}
 
 function getDate() {
   const now = new Date()
@@ -127,16 +135,42 @@ function handleDataFromPopup(data: any) {
     data.forEach((item: any) => {
       const find = form.goodsList.find((x: any) => x.id === item.id)
       if (!find) {
+        // 先使用商品库采购价作为默认值
+        if (!item.purPrice) item.purPrice = item.retailPrice || 0
+        if (!item.quantity) item.quantity = 1
         form.goodsList.push(item)
       }
     })
   }
+  // 如果有供应商，查询供应商报价
+  if (selectedSupplierId.value && data?.length > 0) {
+    const skuIds = data.map((d: any) => d.id).filter(Boolean)
+    if (skuIds.length > 0) {
+      import('@/api/goods/goods').then(({ searchSku }) => {
+        searchSku({ supplierId: selectedSupplierId.value, ids: skuIds.join(','), pageSize: 200 }).then((res: any) => {
+          const supplierPrices = (res.rows || []).reduce((map: any, sku: any) => {
+            if (sku.supplierPrice) map[sku.skuId || sku.id] = sku.supplierPrice
+            return map
+          }, {})
+          form.goodsList.forEach((item: any) => {
+            const sid = item.skuId || item.id
+            if (supplierPrices[sid]) {
+              item.purPrice = supplierPrices[sid]
+            }
+          })
+          calcAmount()
+        })
+      })
+    }
+  }
+  calcAmount()
+}
+
+function calcAmount() {
   let goodsAmount = 0
   form.goodsList.forEach((item: any) => {
-    if (!item.quantity) item.quantity = 1
-    item.itemAmount = item.quantity * (item.retailPrice || 0)
+    item.itemAmount = (item.quantity || 1) * (item.purPrice || 0)
     goodsAmount += item.itemAmount
-    if (!item.isGift) item.isGift = '0'
   })
   form.orderAmount = goodsAmount
 }

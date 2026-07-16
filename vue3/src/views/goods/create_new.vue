@@ -5,16 +5,16 @@
         <el-form-item label="商品分类" prop="categoryId">
           <Treeselect :options="dataList" placeholder="请选择上级菜单" v-model="form.categoryId" style="width:220px" @change="categoryChange" />
         </el-form-item>
-        <el-form-item label="商户" prop="merchantId">
-          <el-select v-model="form.merchantId" placeholder="请选择商户">
-          <el-option
-            v-for="item in merchantList"
-            :key="item.id"
-            :label="item.name"
-            :value="item.id">
-          </el-option>
-          </el-select>
-        </el-form-item>
+<!--        <el-form-item label="商户" prop="merchantId">-->
+<!--          <el-select v-model="form.merchantId" placeholder="请选择商户">-->
+<!--          <el-option-->
+<!--            v-for="item in merchantList"-->
+<!--            :key="item.id"-->
+<!--            :label="item.name"-->
+<!--            :value="item.id">-->
+<!--          </el-option>-->
+<!--          </el-select>-->
+<!--        </el-form-item>-->
       <el-form-item label="品牌" prop="brandId">
         <el-select v-model="form.brandId" filterable  placeholder="请选择品牌">
           <el-option label="无" value="0"></el-option>

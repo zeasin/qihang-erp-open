@@ -31,23 +31,7 @@ public interface OGoodsService extends IService<OGoods> {
      */
     PageResult<OGoods> queryPageList(GoodsQuery bo, PageQuery pageQuery);
 
-    /**
-     * 查询商户商品列表
-     * @param bo
-     * @param pageQuery
-     * @return
-     */
-    PageResult<OGoods> queryMerchantPageList(Long merchantId,GoodsQuery bo, PageQuery pageQuery);
 
-    /**
-     * 查询店铺商品列表
-     * @param merchantId
-     * @param shopId
-     * @param bo
-     * @param pageQuery
-     * @return
-     */
-    PageResult<OGoods> queryMerchantShopPageList(Long merchantId,Long shopId,GoodsQuery bo, PageQuery pageQuery);
 
     /**
      * 商品sku列表

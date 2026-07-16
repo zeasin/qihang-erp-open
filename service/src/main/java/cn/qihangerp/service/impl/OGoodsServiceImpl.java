@@ -50,7 +50,6 @@ public class OGoodsServiceImpl extends ServiceImpl<OGoodsMapper, OGoods>
     @Override
     public PageResult<OGoodsSku> querySkuPageList(GoodsSkuQuery bo, PageQuery pageQuery) {
         LambdaQueryWrapper<OGoodsSku> queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(OGoodsSku::getMerchantId, bo.getMerchantId());
         queryWrapper.eq(bo.getId()!=null,OGoodsSku::getId, bo.getId());
         queryWrapper.eq(bo.getGoodsId()!=null,OGoodsSku::getGoodsId, bo.getGoodsId());
         queryWrapper.like(StringUtils.hasText(bo.getGoodsNum()),OGoodsSku::getGoodsNum, bo.getGoodsNum());
@@ -144,8 +143,6 @@ public class OGoodsServiceImpl extends ServiceImpl<OGoodsMapper, OGoods>
     @Override
     public PageResult<OGoods> queryPageList(GoodsQuery bo, PageQuery pageQuery) {
         LambdaQueryWrapper<OGoods> queryWrapper = new LambdaQueryWrapper<OGoods>();
-        queryWrapper.eq(bo.getMerchantId()!=null,OGoods::getMerchantId,bo.getMerchantId());
-//        queryWrapper.ne(bo.getMerchantId()==null,OGoods::getMerchantId,0);
         queryWrapper.eq(bo.getStatus()!=null,OGoods::getStatus,bo.getStatus());
         queryWrapper.eq(bo.getCategoryId()!=null,OGoods::getCategoryId,bo.getCategoryId());
         queryWrapper.eq(bo.getSupplierId()!=null,OGoods::getSupplierId,bo.getSupplierId());
@@ -164,61 +161,6 @@ public class OGoodsServiceImpl extends ServiceImpl<OGoodsMapper, OGoods>
         return PageResult.build(pages);
     }
 
-    @Override
-    public PageResult<OGoods> queryMerchantPageList(Long merchantId, GoodsQuery bo, PageQuery pageQuery) {
-        LambdaQueryWrapper<OGoods> queryWrapper = new LambdaQueryWrapper<OGoods>();
-        queryWrapper.eq(bo.getStatus()!=null,OGoods::getStatus,bo.getStatus());
-        queryWrapper.eq(bo.getCategoryId()!=null,OGoods::getCategoryId,bo.getCategoryId());
-        queryWrapper.eq(bo.getSupplierId()!=null,OGoods::getSupplierId,bo.getSupplierId());
-        queryWrapper.eq(bo.getBrandId()!=null,OGoods::getBrandId,bo.getBrandId());
-        queryWrapper.eq(StringUtils.hasText(bo.getGoodsNum()),OGoods::getGoodsNum,bo.getGoodsNum());
-        queryWrapper.eq(StringUtils.hasText(bo.getOuterErpGoodsId()),OGoods::getOuterErpGoodsId,bo.getOuterErpGoodsId());
-        queryWrapper.eq(StringUtils.hasText(bo.getSellerId()),OGoods::getSellerId,bo.getSellerId());
-        queryWrapper.eq(StringUtils.hasText(bo.getSellerBrandId()),OGoods::getSellerBrandId,bo.getSellerBrandId());
-        queryWrapper.like(StringUtils.hasText(bo.getName()),OGoods::getName,bo.getName());
-        // 查询总部和自己（merchantId）
-        queryWrapper.and(x->x.eq(OGoods::getMerchantId,0).or().eq(OGoods::getMerchantId,merchantId));
-        queryWrapper.and(x->x.eq(OGoods::getShopId,0));// shopId=0代表不是店铺添加的
-        Page<OGoods> pages = goodsMapper.selectPage(pageQuery.build(), queryWrapper);
-        if(pages.getRecords()!=null){
-            for(OGoods g:pages.getRecords()){
-                g.setSkuList(skuMapper.selectList(new LambdaQueryWrapper<OGoodsSku>().eq(OGoodsSku::getGoodsId,g.getId())));
-            }
-        }
-        return PageResult.build(pages);
-    }
-
-    @Override
-    public PageResult<OGoods> queryMerchantShopPageList(Long merchantId, Long shopId, GoodsQuery bo, PageQuery pageQuery) {
-        LambdaQueryWrapper<OGoods> queryWrapper = new LambdaQueryWrapper<OGoods>();
-        queryWrapper.eq(bo.getStatus()!=null,OGoods::getStatus,bo.getStatus());
-        queryWrapper.eq(bo.getCategoryId()!=null,OGoods::getCategoryId,bo.getCategoryId());
-        queryWrapper.eq(bo.getSupplierId()!=null,OGoods::getSupplierId,bo.getSupplierId());
-        queryWrapper.eq(bo.getBrandId()!=null,OGoods::getBrandId,bo.getBrandId());
-        queryWrapper.eq(StringUtils.hasText(bo.getGoodsNum()),OGoods::getGoodsNum,bo.getGoodsNum());
-        queryWrapper.eq(StringUtils.hasText(bo.getOuterErpGoodsId()),OGoods::getOuterErpGoodsId,bo.getOuterErpGoodsId());
-        queryWrapper.eq(StringUtils.hasText(bo.getSellerId()),OGoods::getSellerId,bo.getSellerId());
-        queryWrapper.eq(StringUtils.hasText(bo.getSellerBrandId()),OGoods::getSellerBrandId,bo.getSellerBrandId());
-        queryWrapper.like(StringUtils.hasText(bo.getName()),OGoods::getName,bo.getName());
-        // 查询总部和所属商户的（merchantId）
-        queryWrapper.and(x->x.eq(OGoods::getMerchantId,0).or().eq(OGoods::getMerchantId,merchantId));
-
-        if(bo.getOwnerId()!=null&&bo.getOwnerId()==-99){
-            // 查自己的店铺
-            queryWrapper.and(x->x.eq(OGoods::getShopId,shopId));
-        }else{
-            // 查非商户其他店铺添加的
-            queryWrapper.and(x->x.eq(OGoods::getShopId,0));
-        }
-
-        Page<OGoods> pages = goodsMapper.selectPage(pageQuery.build(), queryWrapper);
-        if(pages.getRecords()!=null){
-            for(OGoods g:pages.getRecords()){
-                g.setSkuList(skuMapper.selectList(new LambdaQueryWrapper<OGoodsSku>().eq(OGoodsSku::getGoodsId,g.getId())));
-            }
-        }
-        return PageResult.build(pages);
-    }
 
     @Override
     public List<GoodsSpecListVo> searchGoodsSpec(String keyword) {

@@ -124,6 +124,12 @@ public class ErpSupplierProduct {
     private Integer skuCount;
 
     /**
+     * 供应商名称（非数据库字段）
+     */
+    @TableField(exist = false)
+    private String supplierName;
+
+    /**
      * SKU列表（非数据库字段，用于详情展示）
      */
     @TableField(exist = false)
