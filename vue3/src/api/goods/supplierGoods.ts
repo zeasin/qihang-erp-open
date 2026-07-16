@@ -53,3 +53,13 @@ export function updateGoodsStatus(data: Record<string, any>) {
 export function linkGoodsFromLibrary(data: Record<string, any>) {
   return request({ url: '/api/erp-api/supplier/goods/link', method: 'post', data })
 }
+
+/** 供应商SKU列表 */
+export function listSupplierSku(query?: Record<string, any>) {
+  return request({ url: '/api/erp-api/supplier/goods_sku/list', method: 'get', params: query })
+}
+
+/** 供应商报价列表 */
+export function listSupplierPrice(query?: Record<string, any>) {
+  return request({ url: '/api/erp-api/supplier/price/list', method: 'get', params: query })
+}

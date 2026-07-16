@@ -34,6 +34,22 @@ export function linkGoodsFromLibrary(data) {
   })
 }
 
+export function listSupplierSku(query) {
+  return request({
+    url: '/api/erp-api/supplier/goods_sku/list',
+    method: 'get',
+    params: query
+  })
+}
+
+export function listSupplierPrice(query) {
+  return request({
+    url: '/api/erp-api/supplier/price/list',
+    method: 'get',
+    params: query
+  })
+}
+
 // 修改供应商商品（含SKU）
 export function updateGoodsItem(data) {
   return request({
