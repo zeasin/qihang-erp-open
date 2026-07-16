@@ -6,14 +6,8 @@ import cn.qihangerp.common.ResultVo;
 import cn.qihangerp.enums.EnumWarehouseType;
 import cn.qihangerp.model.bo.SupplierProductAddBo;
 import cn.qihangerp.model.bo.SupplierGoodsLinkBo;
-import cn.qihangerp.model.entity.ErpSupplierProduct;
-import cn.qihangerp.model.entity.ErpSupplierProductItem;
-import cn.qihangerp.model.entity.ErpWarehouse;
-import cn.qihangerp.model.entity.ErpWarehouseGoods;
-import cn.qihangerp.mapper.ErpSupplierProductMapper;
-import cn.qihangerp.mapper.ErpSupplierProductItemMapper;
-import cn.qihangerp.mapper.ErpWarehouseMapper;
-import cn.qihangerp.mapper.ErpWarehouseGoodsMapper;
+import cn.qihangerp.model.entity.*;
+import cn.qihangerp.mapper.*;
 import cn.qihangerp.service.ErpSupplierProductService;
 import cn.qihangerp.service.ErpSupplierService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -42,6 +36,9 @@ public class ErpSupplierProductServiceImpl extends ServiceImpl<ErpSupplierProduc
     private final ErpWarehouseMapper warehouseMapper;
     private final ErpWarehouseGoodsMapper warehouseGoodsMapper;
     private final ErpSupplierService supplierService;
+    private final OGoodsMapper goodsMapper;
+    private final OGoodsSkuMapper goodsSkuMapper;
+    private final ErpSupplierGoodsPriceMapper supplierGoodsPriceMapper;
 
     @Override
     public PageResult<ErpSupplierProduct> queryPageList(ErpSupplierProduct goods, PageQuery pageQuery) {
@@ -361,11 +358,15 @@ public class ErpSupplierProductServiceImpl extends ServiceImpl<ErpSupplierProduc
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void deleteProduct(Long id) {
+
         // 1. 删除SKU
         LambdaQueryWrapper<ErpSupplierProductItem> itemWrapper = new LambdaQueryWrapper<>();
         itemWrapper.eq(ErpSupplierProductItem::getSupplierProductId, id);
         itemMapper.delete(itemWrapper);
-
+        // 删除报价
+        LambdaQueryWrapper<ErpSupplierGoodsPrice> priceWrapper = new LambdaQueryWrapper<>();
+        priceWrapper.eq(ErpSupplierGoodsPrice::getSupplierProductId, id);
+        supplierGoodsPriceMapper.delete(priceWrapper);
         // 2. 删除SPU
         this.removeById(id);
     }
@@ -388,15 +389,13 @@ public class ErpSupplierProductServiceImpl extends ServiceImpl<ErpSupplierProduc
     }    @Override
     @Transactional(rollbackFor = Exception.class)
     public ResultVo linkGoodsFromLibrary(String username, SupplierGoodsLinkBo bo) {
-        if (bo.getSupplierId() == null) {
-            return ResultVo.error(500, "供应商ID不能为空");
-        }
-        if (bo.getGoodsId() == null) {
-            return ResultVo.error(500, "商品库SPU ID不能为空");
-        }
-        if (bo.getSkus() == null || bo.getSkus().isEmpty()) {
-            return ResultVo.error(500, "请至少选择一个SKU");
-        }
+        if (bo.getSupplierId() == null) return ResultVo.error(500, "供应商ID不能为空");
+        if (bo.getGoodsId() == null) return ResultVo.error(500, "商品库SPU ID不能为空");
+        if (bo.getSkus() == null || bo.getSkus().isEmpty()) return ResultVo.error(500, "请至少选择一个SKU");
+
+        // 获取商品库商品信息（用于复制到供应商SPU）
+        OGoods oGoods = goodsMapper.selectById(bo.getGoodsId());
+        if (oGoods == null) return ResultVo.error(500, "商品库商品不存在");
 
         // 查找是否已有此供应商的商品（根据商品库SPU匹配）
         LambdaQueryWrapper<ErpSupplierProduct> productQuery = new LambdaQueryWrapper<>();
@@ -405,11 +404,20 @@ public class ErpSupplierProductServiceImpl extends ServiceImpl<ErpSupplierProduc
         ErpSupplierProduct product = this.getOne(productQuery);
 
         if (product == null) {
-            // 创建新的供应商SPU
+            // 创建新的供应商SPU，从商品库复制信息
             product = new ErpSupplierProduct();
             product.setSupplierId(bo.getSupplierId());
-            product.setProductName(""); // 自动填充
+            product.setProductName(oGoods.getName());
+            product.setImageUrl(oGoods.getImage());
+            product.setProductNum(oGoods.getGoodsNum());
+            product.setCategoryId(oGoods.getCategoryId());
+            product.setUnitName(oGoods.getUnitName());
+            product.setLength(oGoods.getLength());
+            product.setWidth(oGoods.getWidth());
+            product.setHeight(oGoods.getHeight());
+            product.setWeight(oGoods.getWeight());
             product.setErpGoodsId(bo.getGoodsId());
+            product.setMerchantId(0L);
             product.setStatus(1);
             product.setCreateBy(username);
             product.setCreateTime(LocalDateTime.now());
@@ -422,11 +430,16 @@ public class ErpSupplierProductServiceImpl extends ServiceImpl<ErpSupplierProduc
         for (SupplierGoodsLinkBo.SkuItem skuItem : bo.getSkus()) {
             if (skuItem.getSkuId() == null) continue;
 
+            // 获取商品库SKU信息
+            OGoodsSku oGoodsSku = goodsSkuMapper.selectById(skuItem.getSkuId());
+            if (oGoodsSku == null) continue;
+
             // 查找是否已有此SKU记录
             LambdaQueryWrapper<ErpSupplierProductItem> itemQuery = new LambdaQueryWrapper<>();
             itemQuery.eq(ErpSupplierProductItem::getSupplierProductId, supplierProductId);
             itemQuery.eq(ErpSupplierProductItem::getErpGoodsSkuId, skuItem.getSkuId());
             ErpSupplierProductItem existingItem = itemMapper.selectOne(itemQuery);
+            Long itemId;
 
             if (existingItem != null) {
                 // 更新价格
@@ -436,13 +449,20 @@ public class ErpSupplierProductServiceImpl extends ServiceImpl<ErpSupplierProduc
                 existingItem.setUpdateBy(username);
                 existingItem.setUpdateTime(LocalDateTime.now());
                 itemMapper.updateById(existingItem);
+                itemId = existingItem.getId();
             } else {
-                // 新增SKU记录，自动关联商品库
+                // 新增SKU记录，从商品库SKU复制信息
                 ErpSupplierProductItem newItem = new ErpSupplierProductItem();
                 newItem.setSupplierProductId(supplierProductId);
                 newItem.setSupplierId(bo.getSupplierId());
-                newItem.setSkuCode(skuItem.getSkuCode());
-                newItem.setProductName(skuItem.getSkuName());
+                newItem.setSkuCode(oGoodsSku.getSkuCode());
+                newItem.setProductName(oGoods.getName());
+                newItem.setBarCode(oGoodsSku.getBarCode());
+                newItem.setColorImage(oGoodsSku.getColorImage());
+                newItem.setColorValue(oGoodsSku.getColorValue());
+                newItem.setSizeValue(oGoodsSku.getSizeValue());
+                newItem.setStyleValue(oGoodsSku.getStyleValue());
+                newItem.setStandard(oGoodsSku.getSkuName());
                 newItem.setPrice(skuItem.getPrice() != null ? skuItem.getPrice() : BigDecimal.ZERO);
                 newItem.setErpGoodsId(bo.getGoodsId());
                 newItem.setErpGoodsSkuId(skuItem.getSkuId());
@@ -450,7 +470,21 @@ public class ErpSupplierProductServiceImpl extends ServiceImpl<ErpSupplierProduc
                 newItem.setCreateBy(username);
                 newItem.setCreateTime(LocalDateTime.now());
                 itemMapper.insert(newItem);
+                itemId = newItem.getId();
             }
+
+            // 向供应商报价表添加一条报价记录
+            ErpSupplierGoodsPrice priceRecord = new ErpSupplierGoodsPrice();
+            priceRecord.setSupplierId(bo.getSupplierId());
+            priceRecord.setSupplierProductId(supplierProductId);
+            priceRecord.setSupplierProductItemId(itemId);
+            priceRecord.setSkuCode(oGoodsSku.getSkuCode());
+            priceRecord.setPrice(skuItem.getPrice() != null ? skuItem.getPrice() : BigDecimal.ZERO);
+            priceRecord.setMerchantId(0L);
+            priceRecord.setStatus(1);
+            priceRecord.setCreateBy(username);
+            priceRecord.setCreateTime(LocalDateTime.now());
+            supplierGoodsPriceMapper.insert(priceRecord);
         }
 
         return ResultVo.success();

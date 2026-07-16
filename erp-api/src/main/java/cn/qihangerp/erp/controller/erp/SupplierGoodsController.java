@@ -87,6 +87,6 @@ public class SupplierGoodsController extends BaseController {
     @PostMapping("/link")
     public AjaxResult linkGoods(@RequestBody SupplierGoodsLinkBo bo) {
         var result = supplierProductService.linkGoodsFromLibrary(getUsername(), bo);
-        return result.getCode() == 200 ? success() : error(result.getMsg());
+        return result.getCode() == 0 ? success() : error(result.getMsg());
     }
 }
