@@ -9,7 +9,6 @@ import cn.qihangerp.model.entity.OOrderStockingItem;
 import cn.qihangerp.model.bo.StockingOrderBo;
 import cn.qihangerp.model.bo.WarehouseManualShipOrderBo;
 import cn.qihangerp.model.vo.PushOrderToShipperResult;
-import cn.qihangerp.request.CloudWarehouseShipOrderQueryRequest;
 import cn.qihangerp.request.ShipRecordQueryRequest;
 import cn.qihangerp.request.SupplierShipOrderSearchRequest;
 import com.baomidou.mybatisplus.extension.service.IService;
@@ -28,15 +27,37 @@ public interface OOrderStockingService extends IService<OOrderStocking> {
      * @return
      */
     ResultVo<Long> distributeOrderToSupplierShip(Long orderId,Long supplierId);
-    /**
-     * 推送订单到仓库发货（系统云仓）
-     * @param
-     * @return
-     */
-    ResultVo<PushOrderToShipperResult> pushOrderItemToCloudWarehouse(Long merchantId);
-
     ResultVo<PushOrderToShipperResult> pushOrderItemToSupplier(Long merchantId);
 
+    /**
+     * 推送订单到云仓（批量，按订单维度）
+     * @param orderIds 订单ID列表
+     * @return 处理结果
+     */
+    ResultVo<String> pushOrderToCloudWarehouse(List<Long> orderIds);
+
+    /**
+     * 推送订单Item到云仓（批量，按商品维度）
+     * @param itemIds 订单Item ID列表
+     * @return 处理结果
+     */
+    ResultVo<String> pushOrderItemToCloudWarehouseByIds(List<Long> itemIds);
+
+    /**
+     * 分配给供应商发货（批量，按订单维度）
+     * @param orderIds 订单ID列表
+     * @param supplierId 供应商ID
+     * @return 处理结果
+     */
+    ResultVo<String> batchDistributeOrderToSupplierShip(List<Long> orderIds, Long supplierId);
+
+    /**
+     * 分配给供应商发货（批量，按商品维度）
+     * @param itemIds 订单Item ID列表
+     * @param supplierId 供应商ID
+     * @return 处理结果
+     */
+    ResultVo<String> batchDistributeOrderItemToSupplierShip(List<Long> itemIds, Long supplierId);
 
     PageResult<OOrderStocking> queryPageList(SupplierShipOrderSearchRequest bo, PageQuery pageQuery);
 
@@ -47,16 +68,6 @@ public interface OOrderStockingService extends IService<OOrderStocking> {
      * @return
      */
     PageResult<OOrderStocking> querySupplierShipPageList(SupplierShipOrderSearchRequest bo, PageQuery pageQuery);
-
-    /**
-     * 云仓发货订单list
-     * @param bo
-     * @param pageQuery
-     * @return
-     */
-    PageResult<OOrderStocking> queryCloudWarehouseShipPageList(CloudWarehouseShipOrderQueryRequest bo, PageQuery pageQuery);
-    List<OOrderStocking> queryCloudWarehouseShipList(CloudWarehouseShipOrderQueryRequest bo);
-
 
     /**
      * 仓库备货列表
@@ -76,14 +87,6 @@ public interface OOrderStockingService extends IService<OOrderStocking> {
     List<OOrderStockingItem> getItemsByOrderNum(String orderNum);
 
     List<OOrderStocking> getByOrderNum(String orderNum);
-
-    /**
-     * 系统云仓手动填写发货物流信息
-     * @param bo
-     * @param operator
-     * @return
-     */
-    ResultVo<Integer> cloudWarehouseShipOrderManualLogistics(WarehouseManualShipOrderBo bo, String operator,Long warehouseId);
 
     /**
      * 仓库系统 生成出库单 （按发货订单）

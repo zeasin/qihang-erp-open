@@ -71,7 +71,6 @@
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="150">
         <template #default="scope">
           <el-button v-if="!scope.row.waybillCode" size="small" type="text" @click="handleQueryOrder(scope.row)">查询云仓单</el-button>
-          <el-button v-if="scope.row.sendStatus===0" size="small" type="text" @click="handlePushAgain(scope.row)">重新推送</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -86,8 +85,6 @@ import { ElMessage } from 'element-plus'
 import { Search, Refresh, DocumentCopy } from '@element-plus/icons-vue'
 import { listCloudWarehouseShipOrder } from '@/api/shipping/cloudWarehouseShip'
 import { listCloudWarehouse } from '@/api/wms/warehouse'
-import { pushAgainToCloudWarehouse } from '@/api/shipping/shipOrder'
-import { queryCloudWarehouseOrder } from '@/api/cloud_warehouse/index'
 import { wuliuguiji } from '@/api/shipping/logisticsTracking'
 import { parseTime } from '@/utils/zhijian'
 import Pagination from '@/components/Pagination/index.vue'
@@ -105,8 +102,7 @@ function resetQuery(){queryParams.orderNum=null;queryParams.waybillCode=null;que
 function handleDetail(row:any){ElMessage.info('订单号: '+row.orderNum)}
 function copyText(text:string){navigator.clipboard.writeText(text).then(()=>ElMessage.success('复制成功')).catch(()=>ElMessage.warning('不支持自动复制'))}
 function handleTrack(row:any){wuliuguiji({waybillCode:row.waybillCode,logisticsCompany:row.logisticsCompany}).then((res:any)=>{const info=res.data||res.rows||[];ElMessage.info(info.length>0?JSON.stringify(info.slice(0,3)):'暂无物流信息')})}
-function handleQueryOrder(row:any){queryCloudWarehouseOrder({id:row.id}).then((res:any)=>{if(res.code===200)ElMessage.success('查询成功');else ElMessage.error(res.msg||'查询失败')})}
-function handlePushAgain(row:any){pushAgainToCloudWarehouse({id:row.id}).then((res:any)=>{if(res.code===200){ElMessage.success('重新推送成功');getList()}else ElMessage.error(res.msg||'推送失败')})}
+function handleQueryOrder(row:any){ElMessage.info('功能开发中')}
 
 onMounted(()=>{listCloudWarehouse({}).then((res:any)=>{warehouseList.value=res.rows||[]});getList()})
 </script>

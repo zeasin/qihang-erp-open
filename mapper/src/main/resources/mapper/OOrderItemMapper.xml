@@ -198,21 +198,4 @@
         order by oi.order_id asc
     </select>
 
-    <select id="selectOrderItemWaitPushCloudWarehouseOrderIdList" resultType="java.lang.Long">
-        SELECT DISTINCT oi.order_id
-        FROM o_order_item as oi
-        left join o_order as o on o.id = oi.order_id
-        WHERE
-        oi.shipper_id > 0
-        and oi.ship_type = 200
-        and oi.refund_status = 1
-        and o.order_status = 1
-        and oi.has_push_erp = 0
-        <if test="merchantId != null">
-            and oi.merchant_id = #{merchantId}
-        </if>
-
-        order by oi.order_id asc
-    </select>
-
-</mapper>
+    </mapper>

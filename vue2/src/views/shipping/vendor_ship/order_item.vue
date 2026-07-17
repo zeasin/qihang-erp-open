@@ -372,7 +372,7 @@ import Clipboard from 'clipboard'
 import {getUserProfile} from "@/api/system/user";
 import {getCloudWarehouseList} from "@/api/cloud_warehouse";
 import {listMerchant, listMerchantCloudWarehouse} from "@/api/shop/merchant";
-import {pushOrderItemToSupplier,pushOrderItemToCloudWarehouse} from "@/api/shipping/shipOrder";
+import {pushOrderItemToSupplier} from "@/api/shipping/shipOrder";
 import {getShopListData} from "@/utils/shopUtils";
 export default {
   name: "waitSendOrderItem",
@@ -712,7 +712,6 @@ export default {
     },
     // handlePushShip2(row){
     //   this.$modal.confirm('推送给云仓发货会根据订单明细关联的发货仓库进行推送，确定推送吗？').then(function() {
-    //     return pushOrderItemToCloudWarehouse();
     //   }).then((resp) => {
     //     this.getList();
     //     this.$modal.msgSuccess("推送成功："+resp.msg);

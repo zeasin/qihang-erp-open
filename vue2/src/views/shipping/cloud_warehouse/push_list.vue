@@ -287,13 +287,6 @@
       </el-table-column>
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width" width="200px">
         <template slot-scope="scope">
-          <el-button style="padding-left: 10px;padding-right: 10px"
-            type="success" v-if="scope.row.erpPushStatus === 0"
-            plain
-            icon="el-icon-download"
-            size="mini"
-            @click="handlePushAgain(scope.row)"
-          >推送到云仓</el-button>
           <el-button
             size="mini"
             type="text"
@@ -411,89 +404,6 @@
       </el-tabs>
     </el-dialog>
 
-    <!-- 打包发货对话框 -->
-    <el-dialog title="推送到云仓发货" :visible.sync="shipOpen" width="950px" append-to-body :close-on-click-modal="false">
-      <el-form ref="form" :model="form" :rules="rules" label-width="80px" >
-        <el-divider content-position="center">订单列表</el-divider>
-        <el-table :data="form.orderList"  style="margin-bottom: 10px;">
-          <!-- <el-table-column type="selection" width="50" align="center" /> -->
-          <el-table-column label="序号" align="center" type="index" width="50"/>
-          <el-table-column label="订单号" prop="orderNum" width="200"></el-table-column>
-          <el-table-column label="商品" width="450">
-            <template slot-scope="scope">
-              <el-row v-for="item in scope.row.itemList" :key="item.id" :gutter="20">
-
-                <div style="float: left;display: flex;align-items: center;" >
-                  <image-preview :src="item.goodsImg" :width="40" :height="40"/>
-                  <div style="margin-left:10px">
-                    <div>{{item.goodsTitle}}</div>
-                    <div> <span style="color: #5a5e66;font-size: 11px">规格：</span>{{getSkuValues(item.goodsSpec)}}&nbsp;
-                      <el-tag size="small"> {{item.skuNum}}</el-tag>
-                    </div>
-                    <div>
-                      <span style="color: #5a5e66;font-size: 11px">平台ID：</span> {{item.skuId}}
-                      <span style="color: #5a5e66;font-size: 11px">规格ID：</span> {{item.goodsSkuId}}
-                    </div>
-                    <div><span style="color: #5a5e66;font-size: 11px">数量：</span><el-tag size="small">x {{item.quantity}}</el-tag>
-                    </div>
-                  </div>
-                </div>
-              </el-row>
-            </template>
-          </el-table-column>
-
-          <el-table-column label="收件人" prop="receiverName" width="200px">
-            <template slot-scope="scope">
-              {{scope.row.receiverName}}&nbsp;
-              {{scope.row.receiverMobile}} <br />
-              {{scope.row.province}} {{scope.row.city}} {{scope.row.town}} <br />
-
-            </template>
-          </el-table-column>
-        </el-table>
-        <!--        <el-form-item label="包裹尺寸" prop="height">-->
-        <!--          <el-input type="number" v-model.number="form.length" placeholder="长mm" style="width:90px" /> x-->
-        <!--          <el-input type="number"  v-model.number="form.width" placeholder="宽mm" style="width:90px" /> x-->
-        <!--          <el-input type="number" v-model.number="form.height" placeholder="高mm" style="width:90px" />-->
-        <!--        </el-form-item>-->
-        <!--        <el-form-item label="包裹重量" prop="weight">-->
-        <!--          <el-input type="number" v-model.number="form.weight" placeholder="请输入包裹重量（单位g）" style="width:300px" />-->
-        <!--        </el-form-item>-->
-        <el-row>
-          <el-col>
-            <el-form-item label="云仓" prop="warehouseId">
-              <el-select v-model="form.warehouseId" filterable r placeholder="选择云仓" style="width:300px" @change="cloudWarehouseChange">
-                <el-option v-for="item in cloudWarehouseList" :key="item.id" :label="item.warehouseName" :value="item.id">
-                  <span style="float: left">{{ item.warehouseName }}</span>
-                  <span style="float: right; color: #8492a6; font-size: 13px" v-if="item.warehouseType=='JDYC'">京东云仓</span>
-                  <!--                  <span style="float: right; color: #8492a6; font-size: 13px" v-if="item.warehouseType=='JDYC' && item.jdlApiType==0">京东云仓-仓配一体</span>-->
-                  <!--                  <span style="float: right; color: #8492a6; font-size: 13px" v-if="item.warehouseType=='JDYC' && item.jdlApiType==1">京东云仓-ERP</span>-->
-                  <span style="float: right; color: #8492a6; font-size: 13px" v-else-if="item.warehouseType=='CLOUD'">系统云仓</span>
-                  <span style="float: right; color: #8492a6; font-size: 13px" v-else>未知云仓</span>
-                </el-option>
-              </el-select>
-            </el-form-item>
-            <el-form-item label="云仓店铺" prop="shopId" v-if="shipJdSelect">
-              <el-select v-model="form.shopId" filterable r placeholder="选择云仓店铺" style="width:300px">
-                <el-option v-for="item in cloudWarehouseShopList" :key="item.id" :label="item.shopName" :value="item.id">
-                </el-option>
-              </el-select>
-            </el-form-item>
-            <el-form-item label="承运商" prop="shipperId" v-if="shipJdSelect">
-              <el-select v-model="form.shipperId" filterable r placeholder="选择承运商" style="width:300px">
-                <el-option v-for="item in cloudWarehouseShipperList" :key="item.id" :label="item.shipperName" :value="item.id">
-                </el-option>
-              </el-select>
-            </el-form-item>
-          </el-col>
-        </el-row>
-      </el-form>
-      <div slot="footer" class="dialog-footer">
-        <el-button type="primary" @click="submitShipForm">推送到云仓</el-button>
-        <el-button @click="cancel">取 消</el-button>
-      </div>
-    </el-dialog>
-
   </div>
 </template>
 
@@ -505,7 +415,6 @@ import Clipboard from 'clipboard'
 import { wuliuguiji } from '@/api/shipping/logistics_tracking'
 import {getUserProfile} from "@/api/system/user";
 import {getCloudWarehouseList, queryCloudWarehouseOrder} from "@/api/cloud_warehouse";
-import {pushAgainToCloudWarehouse} from "@/api/shipping/shipOrder";
 
 export default {
   name: "PushList",
@@ -717,112 +626,6 @@ export default {
 
     reset(){
 
-    },
-    cancel(){
-      this.form.id = null
-      this.form1 = {}
-      this.open = false
-      this.shipOpen = false
-    },
-    // 重新推送到云仓
-    handlePushAgain(row){
-      this.form= {
-        warehouseId:null,
-        shipOrderId:null,
-        shipperId:null,
-        shopId:null,
-        orderList: [],
-      }
-      this.form.orderList.push(row)
-      this.form.shipOrderId = row.id
-      // this.form.orderList = this.orderList.filter(item => this.ids.includes(item.id))
-      this.cloudWarehouseList = []
-      getUserProfile().then(res=> {
-        console.log(res)
-        this.userType = res.data.userType;
-        if (this.userType === '00') {
-          console.log("=========admin========")
-          getCloudWarehouseList({}).then(resp => {
-            this.cloudWarehouseList = resp.rows
-            this.shipOpen = true;
-          })
-        } else if (this.userType === '20') {
-          console.log("=========商户========")
-          listMerchantCloudWarehouse({}).then(response => {
-            if(response.data && response.data.length > 0) {
-              response.data.forEach((item)=>{
-                this.cloudWarehouseList.push({
-                  id:item.warehouseId,
-                  warehouseName:item.warehouseName,
-                  warehouseType:item.warehouseType,
-                })
-              })
-              this.form.warehouseId = response.data[0].warehouseId
-              this.cloudWarehouseChange()
-            }
-            this.shipOpen = true;
-          })
-        }
-      })
-      // this.reset();
-      // const id = row.id || this.ids
-      // console.log('======',id)
-      // if(row){
-      //   this.ids = []
-      //   this.ids.push(row.id)
-      // }
-      // pushAgainToCloudWarehouse({ids:this.ids}).then(resp=>{
-      //   if(resp.code==200){
-      //     this.$modal.msgSuccess(resp.msg)
-      //     this.getList();
-      //   }else{
-      //     this.$modal.msgError("推送失败")
-      //     this.getList();
-      //   }
-      // })
-    },
-    cloudWarehouseChange(){
-      var filter = this.cloudWarehouseList.filter(item => item.id === this.form.warehouseId)
-      console.log('===========选择了仓库',filter)
-      if(filter){
-        // this.$modal.msgSuccess("选择了云仓："+filter[0].id + "  "+filter[0].warehouseName+"  "+filter[0].warehouseType)
-        if(filter[0].warehouseType==='JDYC'){
-          this.form.shopId = null
-          this.form.shipperId = null
-          this.shipJdSelect = true
-          listJdCloudWarehouseShop({warehouseId:this.form.warehouseId}).then(resp=>{
-            this.cloudWarehouseShopList = resp.data
-            if(this.cloudWarehouseShopList&&this.cloudWarehouseShopList.length>0){
-              this.form.shopId = this.cloudWarehouseShopList[0].id
-            }
-            listJdCloudWarehouseShipper({warehouseId:this.form.warehouseId}).then(resp=> {
-              this.cloudWarehouseShipperList = resp.data
-              if(this.cloudWarehouseShipperList&&this.cloudWarehouseShopList.length>0){
-                this.form.shipperId = this.cloudWarehouseShipperList[1].id
-              }
-            })
-          })
-        }else {
-          this.shipJdSelect = false
-          this.form.shopId = 0
-          this.form.shipperId = 0
-        }
-      }
-    },
-    submitShipForm(){
-      this.$refs["form"].validate(valid => {
-        if (valid) {
-          pushAgainToCloudWarehouse(this.form).then(resp =>{
-            if(resp.code===200) {
-              this.$modal.msgSuccess("推送云仓成功");
-              this.shipOpen = false
-              this.getList()
-            }else{
-              this.$modal.msgError(resp.msg)
-            }
-          })
-        }
-      })
     },
     /** 详情按钮操作 */
     handleDetail(row,tagInd) {

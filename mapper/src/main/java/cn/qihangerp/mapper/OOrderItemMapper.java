@@ -29,12 +29,6 @@ public interface OOrderItemMapper extends BaseMapper<OOrderItem> {
      * @return
      */
     List<Long> selectOrderItemWaitPushSupplierOrderIdList(@Param("merchantId") Long merchantId);
-
-    /**
-     * 查询所有待推送的订单明细关联的orderId（已分配仓库发货)
-     * @return
-     */
-    List<Long> selectOrderItemWaitPushCloudWarehouseOrderIdList(@Param("merchantId") Long merchantId);
 }
 
 

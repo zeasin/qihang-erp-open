@@ -52,5 +52,4 @@ public interface OOrderItemService extends IService<OOrderItem> {
      */
     List<Long> selectOrderItemWaitPushSupplierOrderIdList(Long merchantId);
 
-    List<Long> selectOrderItemWaitPushCloudWarehouseOrderIdList(Long merchantId);
-}
+    }

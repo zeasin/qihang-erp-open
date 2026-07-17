@@ -80,18 +80,6 @@ public interface OOrderService extends IService<OOrder> {
     ResultVo<Long> pushOrderToCloudWarehouse(PushToCloudWarehouseOrderBo bo);
 
     /**
-     * 云仓发货单结果更新
-     * @param shipOrderId 发货单id
-     * @param merchantId
-     * @param pushResult
-     * @param pushStatus
-     * @param cloudWarehouseId
-     * @param cloudWarehouseName
-     * @return
-     */
-    ResultVo pushToJdCloudWarehouseResult(Long shipOrderId,Long merchantId, String pushResult, Integer pushStatus, Long cloudWarehouseId, String cloudWarehouseName,String deliveryOrderCode,String erpOrderCode);
-
-    /**
      * 取消店铺订单
      * @param shopOrderId
      * @return

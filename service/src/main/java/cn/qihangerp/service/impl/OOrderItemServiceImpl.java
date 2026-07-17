@@ -417,12 +417,6 @@ public class OOrderItemServiceImpl extends ServiceImpl<OOrderItemMapper, OOrderI
     public List<Long> selectOrderItemWaitPushSupplierOrderIdList(Long merchantId) {
         return mapper.selectOrderItemWaitPushSupplierOrderIdList(merchantId);
     }
-
-
-    @Override
-    public List<Long> selectOrderItemWaitPushCloudWarehouseOrderIdList(Long merchantId) {
-        return mapper.selectOrderItemWaitPushCloudWarehouseOrderIdList(merchantId);
-    }
 }
 
 

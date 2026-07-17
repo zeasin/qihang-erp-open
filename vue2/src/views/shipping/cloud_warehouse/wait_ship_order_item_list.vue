@@ -108,16 +108,6 @@
           @click="handleDistShipper"
         >指定发货人</el-button>
       </el-col>
-      <el-col :span="1.5">
-        <el-button
-          type="warning"
-          plain
-          icon="el-icon-refresh"
-          size="mini"
-          @click="handlePushShip"
-        >推送给发货人</el-button>
-      </el-col>
-
       <right-toolbar :showSearch.sync="showSearch" @queryTable="getList"></right-toolbar>
     </el-row>
 
@@ -369,7 +359,6 @@ import Clipboard from 'clipboard'
 import {getUserProfile} from "@/api/system/user";
 import {getCloudWarehouseList} from "@/api/cloud_warehouse";
 import {listMerchant, listMerchantCloudWarehouse} from "@/api/shop/merchant";
-import {pushOrderItemToCloudWarehouse} from "@/api/shipping/shipOrder";
 import {getShopListData} from "@/utils/shopUtils";
 export default {
   name: "waitSendOrderItem",
@@ -697,20 +686,6 @@ export default {
     shipTypeChange(nv){
       console.log('=====发货方：',nv )
 
-    },
-    /** 推送发货（供应商、仓库） */
-    handlePushShip(row){
-        this.$modal.confirm('已分配发货人的订单会推送给发货人，此操作不可逆，确定推送吗？').then(function() {
-         return pushOrderItemToCloudWarehouse();
-        }).then((resp) => {
-          if (resp.code === 200) {
-            this.getList();
-            this.$modal.msgSuccess("推送成功："+resp.msg);
-          }else{
-            this.$modal.msgError(resp.msg);
-          }
-
-        }).catch(() => {});
     },
     submitDistShipperForm(){
       console.log('=======提交发货人=====', this.form3)
