@@ -1,8 +1,8 @@
 <template>
   <div class="app-container">
     <el-form :model="queryParams" ref="queryFormRef" size="small" :inline="true" v-show="showSearch" label-width="68px">
-      <el-form-item label="属性名" prop="name">
-        <el-input v-model="queryParams.name" placeholder="请输入属性名" clearable @keyup.enter="handleQuery" />
+      <el-form-item label="属性名" prop="title">
+        <el-input v-model="queryParams.title" placeholder="请输入属性名" clearable @keyup.enter="handleQuery" />
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="handleQuery"><el-icon><Search /></el-icon>搜索</el-button>
@@ -18,7 +18,7 @@
     </el-row>
 
     <el-table v-loading="loading" :data="attributeList" @selection-change="handleSelectionChange">
-      <el-table-column label="属性名" align="center" prop="name" />
+      <el-table-column label="属性名" align="center" prop="title" />
       <el-table-column label="排序" align="center" prop="sort" />
       <el-table-column label="操作" align="center" class-name="small-padding fixed-width">
         <template #default="scope">
@@ -37,8 +37,8 @@
 
     <el-dialog :title="title" v-model="open" width="500px" append-to-body>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
-        <el-form-item label="属性名" prop="name">
-          <el-input v-model="form.name" placeholder="请输入属性名" />
+        <el-form-item label="属性名" prop="title">
+          <el-input v-model="form.title" placeholder="请输入属性名" />
         </el-form-item>
         <el-form-item label="排序" prop="sort">
           <el-input v-model.number="form.sort" placeholder="请输入排序" />
@@ -81,17 +81,17 @@ const formRef = ref<FormInstance>()
 
 const form = reactive<Record<string, any>>({
   id: null,
-  name: null,
+  title: null,
   sort: null
 })
 
 const queryParams = reactive({
-  name: null,
+  title: null,
   categoryId
 })
 
 const rules = {
-  name: [{ required: true, message: '属性名不能为空', trigger: 'blur' }]
+  title: [{ required: true, message: '属性名不能为空', trigger: 'blur' }]
 }
 
 onMounted(() => { getList() })
