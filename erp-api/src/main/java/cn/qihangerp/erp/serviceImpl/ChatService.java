@@ -5,10 +5,13 @@ import cn.qihangerp.erp.serviceImpl.ai.GoodsTools;
 import cn.qihangerp.erp.serviceImpl.ai.InventoryTools;
 import cn.qihangerp.erp.serviceImpl.ai.MemberTools;
 import cn.qihangerp.erp.serviceImpl.ai.OrderTools;
+import cn.qihangerp.erp.serviceImpl.ai.LogisticsTools;
 import cn.qihangerp.erp.serviceImpl.ai.PurchaseTools;
 import cn.qihangerp.erp.serviceImpl.ai.RefundTools;
 import cn.qihangerp.erp.serviceImpl.ai.ShopTools;
+import cn.qihangerp.erp.serviceImpl.ai.StockFlowTools;
 import cn.qihangerp.erp.serviceImpl.ai.SupplierTools;
+import cn.qihangerp.erp.serviceImpl.ai.WarehouseTools;
 import cn.qihangerp.model.entity.AiConfig;
 import cn.qihangerp.model.entity.AiConversationHistory;
 import cn.qihangerp.service.AiConversationHistoryService;
@@ -42,6 +45,9 @@ public class ChatService {
     private final PurchaseTools purchaseTools;
     private final MemberTools memberTools;
     private final SupplierTools supplierTools;
+    private final LogisticsTools logisticsTools;
+    private final WarehouseTools warehouseTools;
+    private final StockFlowTools stockFlowTools;
 
     private static final String SYSTEM_PROMPT = """
             你是启航电商ERP系统的AI助手，帮助用户处理电商运营、订单管理、商品管理、库存管理、采购管理、仓库管理、售后管理等方面的问题。请用专业、简洁的中文回答。
@@ -65,7 +71,7 @@ public class ChatService {
                 }
             }
 
-            ChatClient chatClient = orchestrationService.buildChatClient(config, goodsTools, orderTools, refundTools, inventoryTools, shopTools, purchaseTools, memberTools, supplierTools);
+            ChatClient chatClient = orchestrationService.buildChatClient(config, goodsTools, orderTools, refundTools, inventoryTools, shopTools, purchaseTools, memberTools, supplierTools, logisticsTools, warehouseTools, stockFlowTools);
 
             StringBuilder fullResponse = new StringBuilder();
 

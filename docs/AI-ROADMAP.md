@@ -135,16 +135,35 @@
 
 **目标：** 让 AI 能查询更多业务数据面，覆盖更多分析场景
 
-| 产出 | 说明 |
-|------|------|
-| 更多原子 Tool | 订单查询、物流轨迹、采购单、供应商等单表 Tool |
-| Tool 数据权限 | Tool 自动追加 merchant_id 过滤 |
+**当前已实现 Tool（7个类，8个数据面）：**
+
+| Tool 类 | 方法 | 数据域 |
+|---------|------|--------|
+| `ShopTools` | `getShopList()` | 店铺 |
+| `OrderTools` | `getOrderList(days, status, limit)` | 订单 |
+| `RefundTools` | `getRefundList(days, reason, goodsName, limit)` | 退款 |
+| `InventoryTools` | `getInventoryList(availableLte, limit)` | 库存 |
+| `GoodsTools` | `searchGoods(keyword)` / `searchSku(keyword)` | 商品/SKU |
+| `PurchaseTools` | `getPurchaseOrderList(days, status, limit)` | 采购 |
+| `MemberTools` | `getMemberList(keyword, limit)` | 会员 |
+| `SupplierTools` | `getSupplierList(keyword, limit)` | 供应商 |
+
+**规划中的 Tool（按优先级排列）：**
+
+| Tool 类 | 方法 | 数据域 | 用户场景 |
+|---------|------|--------|---------|
+| `LogisticsTools` | `getWaybillList(days, status)` | 物流运单 | "查一下物流到哪了"、"哪些订单没打单" |
+| `WarehouseTools` | `getWarehouseList()` | 仓库 | "有哪些仓库" |
+| `FinanceTools` | `getLedgerList(days)` / `getSettlementList(days)` | 财务流水/结算 | "这个月利润多少"、"财务流水" |
+| `StockFlowTools` | `getStockInList(days)` / `getStockOutList(days)` | 出入库记录 | "最近入库了什么"、"出库记录" |
+| `ShopDailyTools` | `getShopDailyList(days, shopId)` | 店铺日报 | "各店每天数据" |
+| `CategoryTools` | `getCategoryList()` / `getBrandList()` | 商品分类/品牌 | 辅助查询 |
+| `UserTools` | `getUserList(keyword)` | 系统用户 | "系统有哪些用户" |
+| `ExpenseTools` | `getExpenseList(days, type)` | 费用 | "最近有什么费用" |
 
 **说明：**
 - 多轮 Tool Calling 由 Spring AI 2.0 内建，不需要手写编排引擎
 - 每个 Tool 是单表原子查询，AI 自行组合分析
-- 当前已有：RefundTools、InventoryTools、ShopTools、GoodsTools
-- 后续按需添加：OrderTools、LogisticsTools、PurchaseTools 等
 
 **覆盖场景：** 📊 经营分析 + 🔗 跨模块分析 ≈ **19 个场景**
 
@@ -303,8 +322,17 @@ erp-api/src/main/java/cn/qihangerp/erp/
 │   │       ├── RefundTools.java         # ✅ 退款记录查询
 │   │       ├── InventoryTools.java      # ✅ 库存查询
 │   │       ├── GoodsTools.java          # ✅ 商品/SKU搜索
-│   │       ├── OrderTools.java          # 🆕 订单查询（计划）
-│   │       └── PurchaseTools.java       # 🆕 采购单查询（计划）
+│   │       ├── OrderTools.java          # ✅ 订单查询
+│   │       ├── PurchaseTools.java       # ✅ 采购单查询
+│   │       ├── MemberTools.java         # ✅ 会员查询
+│   │       ├── SupplierTools.java       # ✅ 供应商查询
+│   │       ├── LogisticsTools.java      # 🆕 物流运单（规划）
+│   │       ├── WarehouseTools.java      # 🆕 仓库（规划）
+│   │       ├── FinanceTools.java        # 🆕 财务（规划）
+│   │       ├── StockFlowTools.java      # 🆕 出入库（规划）
+│   │       ├── CategoryTools.java       # 🆕 分类品牌（规划）
+│   │       ├── UserTools.java           # 🆕 系统用户（规划）
+│   │       └── ExpenseTools.java        # 🆕 费用（规划）
 │   ├── alert/
 │   │   ├── AlertScanner.java            # 🆕 阶段四 - 预警扫描
 │   │   └── AlertEnhancer.java           # 🆕 阶段四 - AI增强解读
