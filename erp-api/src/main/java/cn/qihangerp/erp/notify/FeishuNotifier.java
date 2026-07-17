@@ -18,7 +18,7 @@ public class FeishuNotifier {
             body.put("content", new JSONObject(Map.of("text", title + "\n\n" + content)));
 
             String result = OkHttpClientHelper.post(webhook, body.toJSONString());
-            boolean ok = result != null && result.contains("\"ok\"");
+            boolean ok = result != null && (result.contains("\"code\":0") || result.contains("\"StatusCode\":0"));
             if (!ok) log.warn("飞书推送返回异常: {}", result);
             return ok;
         } catch (Exception e) {

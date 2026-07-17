@@ -46,12 +46,9 @@
     <pagination v-show="total > 0" :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
     <el-dialog :title="title" v-model="open" width="560px" append-to-body>
-      <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
-        <el-form-item label="渠道名称" prop="channelName">
-          <el-input v-model="form.channelName" placeholder="请输入渠道名称" />
-        </el-form-item>
+      <el-form ref="formRef" :model="form" :rules="rules" label-width="120px">
         <el-form-item label="渠道类型" prop="channelType">
-          <el-select v-model="form.channelType" placeholder="请选择渠道类型" style="width: 100%">
+          <el-select v-model="form.channelType" placeholder="请选择渠道类型" style="width: 100%" @change="autoChannelName">
             <el-option label="飞书" value="FEISHU" />
             <el-option label="钉钉" value="DINGTALK" />
             <el-option label="企业微信" value="WECHAT" />
@@ -72,6 +69,7 @@
       </el-form>
       <template #footer>
         <div class="dialog-footer">
+          <el-button type="warning" @click="handleTest(form)"><el-icon><Promotion /></el-icon>测试消息</el-button>
           <el-button type="primary" @click="submitForm">确 定</el-button>
           <el-button @click="cancel">取 消</el-button>
         </div>
@@ -100,6 +98,8 @@ const title = ref('')
 const open = ref(false)
 const formRef = ref<FormInstance>()
 
+const channelNameMap: Record<string, string> = { FEISHU: '飞书通知', DINGTALK: '钉钉通知', WECHAT: '企微通知' }
+
 const form = reactive<Record<string, any>>({
   id: undefined,
   channelName: undefined,
@@ -115,7 +115,6 @@ const queryParams = reactive({
 })
 
 const rules = {
-  channelName: [{ required: true, message: '渠道名称不能为空', trigger: 'blur' }],
   channelType: [{ required: true, message: '请选择渠道类型', trigger: 'change' }],
   webhookUrl: [{ required: true, message: 'Webhook地址不能为空', trigger: 'blur' }]
 }
@@ -134,6 +133,12 @@ function getList() {
 function cancel() {
   open.value = false
   reset()
+}
+
+function autoChannelName() {
+  if (!form.id && form.channelType && channelNameMap[form.channelType]) {
+    form.channelName = channelNameMap[form.channelType]
+  }
 }
 
 function reset() {
