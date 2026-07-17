@@ -138,7 +138,7 @@ public class AiBriefService {
                                     .call()
                                     .content()
                     )
-                    .get(30, TimeUnit.SECONDS);
+                    .get(120, TimeUnit.SECONDS);
             return parseAiResponse(response, todayData);
         } catch (TimeoutException e) {
             log.warn("AI接口响应超时，使用降级数据", e);
