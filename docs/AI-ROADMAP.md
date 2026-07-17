@@ -62,9 +62,10 @@
 ┌─────────────────────────────────────────────────────────────┐
 │  ⑤ 前端 AI 交互层（AI浮窗/通知中心/内联建议/确认弹窗）     │
 ├─────────────────────────────────────────────────────────────┤
-│  ③ 对话引擎（会话管理/记忆/Context 注入）                   │
-│  ② Tool 注册中心（查询/分析/操作 Tool + 权限+确认+日志）   │
-│  ④ 数据编排引擎（意图→DataResolver 聚合→Prompt 构建）      │
+│  ② Spring AI 2.0 @Tool + ChatClient（多轮 Tool Calling）   │
+│     ├─ AI 自主决定调哪些 Tool                               │
+│     ├─ Spring AI 自动执行 + 结果回传                        │
+│     └─ 对话引擎（会话管理 + 历史记忆 + SystemPrompt）      │
 │  ⑥ 主动预警引擎（定时扫描→AI解读→SSE推送）                │
 ├─────────────────────────────────────────────────────────────┤
 │  ① 大模型接入层（多模型配置/切换/降级）                    │
@@ -73,8 +74,9 @@
 ```
 
 **关键依赖关系：**
-- ① + ② + ③ + ⑤ + ⑦ 是**核心骨架**，覆盖 60+ 个场景
-- ④ + ⑥ 是**增强能力**，可在核心骨架上增量添加
+- ① + ② + ⑤ + ⑦ 是**核心骨架**，覆盖 60+ 个场景
+- ⑥ 是**增强能力**，可在核心骨架上增量添加
+- 多轮编排（原④）由 Spring AI 2.0 内建在②中，不需要额外实现
 
 ---
 
@@ -129,27 +131,20 @@
 
 ---
 
-### 阶段三：数据编排引擎 — 复杂分析场景
+### 阶段三：扩展原子 Tool — 丰富数据面
 
-**目标：** "退款率为什么高了？"这种跨表分析能一句话回答
+**目标：** 让 AI 能查询更多业务数据面，覆盖更多分析场景
 
 | 产出 | 说明 |
 |------|------|
-| `DataResolver` 注册中心 | 每个 Resolver 封装一种数据查询能力 |
-| 意图匹配器 | 用户提问 → 匹配对应的 DataResolver 组合 |
-| 动态数据聚合器 | 调用多个 Resolver → 数据组装 → Prompt 构建 |
-| 首批 Resolver | 退款分析、销售排行、库存分析、店铺对比 |
+| 更多原子 Tool | 订单查询、物流轨迹、采购单、供应商等单表 Tool |
+| Tool 数据权限 | Tool 自动追加 merchant_id 过滤 |
 
-**DataResolver 示例：**
-```java
-// "退款率为什么高了" 触发：
-resolverChain = [
-    RefundTrendResolver,        // 退款率趋势
-    TopRefundGoodsResolver,     // 退款TOP商品
-    RefundReasonResolver,       // 退款原因分布
-    ShopRefundCompareResolver   // 店铺对比
-]
-```
+**说明：**
+- 多轮 Tool Calling 由 Spring AI 2.0 内建，不需要手写编排引擎
+- 每个 Tool 是单表原子查询，AI 自行组合分析
+- 当前已有：RefundTools、InventoryTools、ShopTools、GoodsTools
+- 后续按需添加：OrderTools、LogisticsTools、PurchaseTools 等
 
 **覆盖场景：** 📊 经营分析 + 🔗 跨模块分析 ≈ **19 个场景**
 
@@ -175,10 +170,10 @@ resolverChain = [
 
 | 能力 | 说明 | 前置依赖 |
 |------|------|---------|
-| **智能供应链** | 销量预测 + 智能补货 + 库存调拨 | 阶段三编排引擎 |
+| **智能供应链** | 销量预测 + 智能补货 + 库存调拨 | 更多原子 Tool |
 | **RAG 帮助系统** | 操作手册向量化 → 问答 | 需引入 PGVector |
-| **NL2SQL** | 自然语言查任意数据 | 阶段三编排引擎 |
-| **MCP 开放协议** | 对外暴露 AI 能力 | 阶段二 Tool 系统 |
+| **NL2SQL** | 自然语言查任意数据 | Spring AI Advisors |
+| **MCP 开放协议** | 对外暴露 AI 能力 | Tool 系统 |
 
 ---
 
@@ -303,17 +298,13 @@ erp-api/src/main/java/cn/qihangerp/erp/
 │   │   ├── AiTool.java                  # 🆕 Tool接口定义
 │   │   ├── ToolRegistry.java            # 🆕 Tool注册中心
 │   │   ├── ToolExecutor.java            # 🆕 Tool执行引擎
-│   │   └── tools/                       # 🆕 Tool实现
-│   │       ├── OrderTool.java
-│   │       ├── GoodsTool.java
-│   │       ├── InventoryTool.java
-│   │       ├── RefundTool.java
-│   │       ├── PurchaseTool.java
-│   │       └── ShipTool.java
-│   ├── orchestration/
-│   │   ├── DataResolver.java            # 🆕 阶段三 - 数据解析器接口
-│   │   ├── Orchestrator.java            # 🆕 阶段三 - 编排引擎
-│   │   └── resolvers/                   # 🆕 阶段三 - Resolver实现
+│   │   └── tools/                       # ✅ @Tool 原子查询组件
+│   │       ├── ShopTools.java           # ✅ 店铺查询
+│   │       ├── RefundTools.java         # ✅ 退款记录查询
+│   │       ├── InventoryTools.java      # ✅ 库存查询
+│   │       ├── GoodsTools.java          # ✅ 商品/SKU搜索
+│   │       ├── OrderTools.java          # 🆕 订单查询（计划）
+│   │       └── PurchaseTools.java       # 🆕 采购单查询（计划）
 │   ├── alert/
 │   │   ├── AlertScanner.java            # 🆕 阶段四 - 预警扫描
 │   │   └── AlertEnhancer.java           # 🆕 阶段四 - AI增强解读
@@ -330,8 +321,6 @@ vue3/src/
 │   └── notification.ts                  # 🆕 通知API
 ├── views/ai/
 │   ├── config.vue                       # ✅ 已有
-│   ├── analysis.vue                     # ✅ 已有，连后端
-│   ├── history.vue                      # ✅ 已有，连后端
 │   └── notification/                    # 🆕 通知中心页
 ├── components/
 │   ├── AiFloatingChat.vue               # 🆕 AI悬浮浮窗（全局）
@@ -361,11 +350,11 @@ vue3/src/
 │   │
 │   └── 用户可见：AI 浮窗聊天 + 能查订单/商品/库存 + 能建采购单
 │
-├── 阶段三：编排引擎（2周）
-│   ├── DataResolver 体系
-│   └── 跨表分析场景
-│   │
-│   └── 用户可见：问"为什么退款率高"AI 能分析原因
+（编排引擎由 Spring AI 2.0 内建，无需单独实现）
+│
+├── 阶段三：扩展原子 Tool（按需）
+│   ├── 增加更多单表查询 Tool
+│   └── 覆盖更多业务数据面
 │
 ├── 阶段四：主动预警（2周）
 │   ├── 定时扫描 + 规则引擎

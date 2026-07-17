@@ -2,6 +2,13 @@ package cn.qihangerp.erp.serviceImpl;
 
 import cn.qihangerp.erp.serviceImpl.ai.AiOrchestrationService;
 import cn.qihangerp.erp.serviceImpl.ai.GoodsTools;
+import cn.qihangerp.erp.serviceImpl.ai.InventoryTools;
+import cn.qihangerp.erp.serviceImpl.ai.MemberTools;
+import cn.qihangerp.erp.serviceImpl.ai.OrderTools;
+import cn.qihangerp.erp.serviceImpl.ai.PurchaseTools;
+import cn.qihangerp.erp.serviceImpl.ai.RefundTools;
+import cn.qihangerp.erp.serviceImpl.ai.ShopTools;
+import cn.qihangerp.erp.serviceImpl.ai.SupplierTools;
 import cn.qihangerp.model.entity.AiConfig;
 import cn.qihangerp.model.entity.AiConversationHistory;
 import cn.qihangerp.service.AiConversationHistoryService;
@@ -28,8 +35,21 @@ public class ChatService {
     private final AiConversationHistoryService historyService;
     private final AiOrchestrationService orchestrationService;
     private final GoodsTools goodsTools;
+    private final OrderTools orderTools;
+    private final RefundTools refundTools;
+    private final InventoryTools inventoryTools;
+    private final ShopTools shopTools;
+    private final PurchaseTools purchaseTools;
+    private final MemberTools memberTools;
+    private final SupplierTools supplierTools;
 
-    private static final String SYSTEM_PROMPT = "你是启航电商ERP系统的AI助手，帮助用户处理电商运营、订单管理、商品管理、库存管理、采购管理、仓库管理、售后管理等方面的问题。请用专业、简洁的中文回答。\n\n可用的工具：\n- searchGoods(keyword)：根据关键词搜索ERP商品库中的商品，返回商品名称、编号、零售价等\n- searchSku(keyword)：根据SKU编码或名称搜索商品SKU，返回编码、价格、规格等详细信息\n\n当你需要查询商品信息时，请调用对应的工具。";
+    private static final String SYSTEM_PROMPT = """
+            你是启航电商ERP系统的AI助手，帮助用户处理电商运营、订单管理、商品管理、库存管理、采购管理、仓库管理、售后管理等方面的问题。请用专业、简洁的中文回答。
+            
+            你可以多次调用工具来逐步获取数据，每次根据返回的结果决定下一步查什么。
+            所有工具的说明和参数已内置，由你自行决定每次调哪些工具、需要什么筛选条件。
+            由你自行对数据进行分组、排序、统计、对比，得出结论。
+            """;
 
     public void streamResponse(AiConfig config, SseEmitter emitter, String sessionId, Long userId) {
         try {
@@ -45,7 +65,7 @@ public class ChatService {
                 }
             }
 
-            ChatClient chatClient = orchestrationService.buildChatClient(config, goodsTools);
+            ChatClient chatClient = orchestrationService.buildChatClient(config, goodsTools, orderTools, refundTools, inventoryTools, shopTools, purchaseTools, memberTools, supplierTools);
 
             StringBuilder fullResponse = new StringBuilder();
 
