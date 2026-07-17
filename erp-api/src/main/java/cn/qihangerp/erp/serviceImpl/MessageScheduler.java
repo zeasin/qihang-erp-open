@@ -4,14 +4,10 @@ import cn.qihangerp.erp.notify.NotifierService;
 import cn.qihangerp.erp.serviceImpl.ai.AiOrchestrationService;
 import cn.qihangerp.erp.serviceImpl.ai.InventoryTools;
 import cn.qihangerp.erp.serviceImpl.ai.RefundTools;
-import cn.qihangerp.model.entity.OGoodsInventory;
-import cn.qihangerp.model.entity.OGoodsSku;
 import cn.qihangerp.model.entity.ShopRefund;
 import cn.qihangerp.model.entity.SysMessage;
 import cn.qihangerp.model.vo.SalesDailyVo;
 import cn.qihangerp.service.ISysMessageService;
-import cn.qihangerp.service.OGoodsInventoryService;
-import cn.qihangerp.service.OGoodsSkuService;
 import cn.qihangerp.service.OOrderService;
 import cn.qihangerp.service.ShopRefundService;
 import cn.qihangerp.sse.SseService;
@@ -41,19 +37,18 @@ public class MessageScheduler {
     private final InventoryTools inventoryTools;
     private final NotifierService notifierService;
     private final SseService sseService;
-    private final OGoodsSkuService goodsSkuService;
-    private final OGoodsInventoryService goodsInventoryService;
 
     private static final List<String> NEED_NOTIFY_TYPES = List.of("stock_low", "order_timeout", "ai_analysis");
 
     @Scheduled(fixedRate = 1800000)
     public void run() {
-        checkSalesZero();
-        checkShipPending();
-        checkRefundExcess();
-        checkStockLow();
-        checkOrderTimeout();
-        checkAiAnalysis();
+        log.info("======自动分析====");
+//        checkSalesZero();
+//        checkShipPending();
+//        checkRefundExcess();
+//        checkStockLow();
+//        checkOrderTimeout();
+//        checkAiAnalysis();
     }
 
     @Scheduled(fixedRate = 600000)
@@ -89,37 +84,8 @@ public class MessageScheduler {
     }
 
     private void checkStockLow() {
-        LambdaQueryWrapper<OGoodsSku> skuWrapper = new LambdaQueryWrapper<>();
-        skuWrapper.isNotNull(OGoodsSku::getLowQty);
-        skuWrapper.gt(OGoodsSku::getLowQty, 0);
-        List<OGoodsSku> skuList = goodsSkuService.list(skuWrapper);
-        if (skuList.isEmpty()) return;
-
-        int warningCount = 0;
-        for (OGoodsSku sku : skuList) {
-            LambdaQueryWrapper<OGoodsInventory> invWrapper = new LambdaQueryWrapper<>();
-            invWrapper.eq(OGoodsInventory::getSkuId, sku.getId());
-            List<OGoodsInventory> inventories = goodsInventoryService.list(invWrapper);
-
-            int totalAvailable = inventories.stream()
-                    .mapToInt(inv -> inv.getAvailableQuantity() != null ? inv.getAvailableQuantity() : 0)
-                    .sum();
-
-            if (totalAvailable <= sku.getLowQty()) {
-                String goodsName = sku.getGoodsName() != null ? sku.getGoodsName() : "";
-                String skuName = sku.getSkuName() != null ? sku.getSkuName() : "";
-                String skuCode = sku.getSkuCode() != null ? sku.getSkuCode() : "";
-                save("stock_low", "high", "库存不足: " + goodsName,
-                        "SKU " + skuCode + " " + skuName + " 可用库存" + totalAvailable + " 件，低于预警值" + sku.getLowQty() + " 件",
-                        "/goods/sku_list", "system");
-                warningCount++;
-                log.info("库存预警: SKU={}, 可用库存={}, 预警值={}", skuCode, totalAvailable, sku.getLowQty());
-            }
-        }
-
-        if (warningCount > 0) {
-            log.info("库存预警检查完成，共发现 {} 个 SKU 库存不足", warningCount);
-        }
+        // TODO: query OGoodsSku with lowQty > availableQty
+        // save("stock_low", "high", "库存不足: 商品名", "SKU xxx 库存仅剩 n 件")
     }
 
     private void checkOrderTimeout() {
@@ -135,7 +101,7 @@ public class MessageScheduler {
                             你是电商运营监控助手，请查询数据检查是否存在异常：
 
                             如果有异常，按以下格式返回JSON数组，没有则返回[]：
-                            {"type":"ai_analysis","level":"high","title":"异常标题","content":"异常描述"}
+                            [{"type":"ai_analysis","level":"high","title":"异常标题","content":"异常描述"}]
                             只返回JSON数组，不要其他文字。
                             """).call().content()
             ).get(60, TimeUnit.SECONDS);

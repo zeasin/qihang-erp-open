@@ -51,7 +51,7 @@ public class ChatService {
 
     private static final String SYSTEM_PROMPT = """
             你是启航电商ERP系统的AI助手，帮助用户处理电商运营、订单管理、商品管理、库存管理、采购管理、仓库管理、售后管理等方面的问题。请用专业、简洁的中文回答。
-            
+
             你可以多次调用工具来逐步获取数据，每次根据返回的结果决定下一步查什么。
             所有工具的说明和参数已内置，由你自行决定每次调哪些工具、需要什么筛选条件。
             由你自行对数据进行分组、排序、统计、对比，得出结论。
@@ -115,7 +115,7 @@ public class ChatService {
             }
             emitter.send(SseEmitter.event().data(event.toJSONString()));
         } catch (IOException e) {
-            log.warn("发送SSE事件失败: {}", e.getMessage());
+            log.debug("发送SSE事件失败: {}", e.getMessage());
         }
     }
 

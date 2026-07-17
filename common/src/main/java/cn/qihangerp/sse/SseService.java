@@ -47,18 +47,22 @@ public class SseService {
 
         // 3. 注册 SseEmitter 的生命周期回调，以便在连接关闭、超时或出错时自动清理
         emitter.onCompletion(() -> {
-            clientEmitters.remove(clientId); // 连接正常完成时移除
-            log.info("客户端 ID: {} 的 SSE 连接已完成", clientId);
+            clientEmitters.remove(clientId);
+            log.debug("客户端 ID: {} 的 SSE 连接已完成", clientId);
         });
 
         emitter.onTimeout(() -> {
-            clientEmitters.remove(clientId); // 连接超时时移除
+            clientEmitters.remove(clientId);
             log.info("客户端 ID: {} 的 SSE 连接已超时", clientId);
         });
 
         emitter.onError((Throwable throwable) -> {
-            clientEmitters.remove(clientId); // 连接出错时移除
-            log.warn("客户端 ID: {} 的 SSE 连接发生错误", clientId, throwable);
+            clientEmitters.remove(clientId);
+            if (throwable instanceof org.springframework.web.context.request.async.AsyncRequestNotUsableException) {
+                log.debug("客户端 ID: {} 的 SSE 连接断开（客户端主动断开或网络中断）", clientId);
+            } else {
+                log.warn("客户端 ID: {} 的 SSE 连接发生错误", clientId, throwable);
+            }
         });
 
         // 4. 将新的 emitter 存入 map
@@ -131,7 +135,7 @@ public class SseService {
                 return true; // 发送成功
             } catch (IOException e) {
                 // 发送出错，通常意味着连接已断开
-                log.warn("无法向客户端 ID: {} 发送消息，正在移除连接", clientId, e);
+                log.debug("无法向客户端 ID: {} 发送消息，正在移除连接", clientId, e);
                 // 移除失效的 emitter
                 clientEmitters.remove(clientId);
                 // 标记 emitter 完成并带有错误
