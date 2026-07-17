@@ -1,15 +1,18 @@
 package cn.qihangerp.erp.serviceImpl.ai;
 
+import cn.qihangerp.model.entity.ShopRefund;
 import cn.qihangerp.model.vo.SalesDailyVo;
 import cn.qihangerp.service.OOrderService;
 import cn.qihangerp.service.OShopService;
+import cn.qihangerp.service.ShopRefundService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -19,6 +22,7 @@ public class DataTools {
 
     private final OOrderService orderService;
     private final OShopService shopService;
+    private final ShopRefundService refundService;
 
     @Tool(description = "获取最近N天的销售统计，返回每日销售额、订单数、待发货数")
     public String getSalesSummary(
@@ -80,5 +84,22 @@ public class DataTools {
                     .append(" [平台类型:").append(shop.getType() != null ? shop.getType() : "").append("]\n");
         }
         return sb.toString();
+    }
+
+    @Tool(description = "获取退款/售后数据统计，返回退款总数、待处理退款数")
+    public String getRefundSummary() {
+        long total = refundService.count();
+        LambdaQueryWrapper<ShopRefund> pending = new LambdaQueryWrapper<>();
+        pending.eq(ShopRefund::getStatus, 0);
+        long pendingCount = refundService.count(pending);
+        return "退款总计" + total + "条，待处理" + pendingCount + "条";
+    }
+
+    @Tool(description = "获取退款率统计，返回近30天退款单数和占比")
+    public String getRefundRate() {
+        LambdaQueryWrapper<ShopRefund> wrapper = new LambdaQueryWrapper<>();
+        wrapper.ge(ShopRefund::getCreateOn, LocalDateTime.now().minusDays(30));
+        long monthRefunds = refundService.count(wrapper);
+        return "近30天退款" + monthRefunds + "单";
     }
 }

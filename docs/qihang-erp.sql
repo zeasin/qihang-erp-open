@@ -7887,4 +7887,22 @@ CREATE TABLE `ai_config` (
                              PRIMARY KEY (`id`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='AI大模型配置表';
 
+-- ----------------------------
+-- Table structure for sys_message
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_message`;
+CREATE TABLE `sys_message` (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `type` varchar(50) NOT NULL COMMENT '消息类型：sales_zero-销售额为零, ship_pending-发货积压, refund_excess-退款过多, ai_analysis-AI分析',
+  `level` varchar(10) NOT NULL COMMENT '级别：high/medium/low',
+  `title` varchar(200) NOT NULL COMMENT '消息标题',
+  `content` text COMMENT '消息内容',
+  `link` varchar(500) DEFAULT NULL COMMENT '跳转链接',
+  `source` varchar(50) DEFAULT 'system' COMMENT '来源：ai/system',
+  `is_read` int DEFAULT 0 COMMENT '是否已读：0未读 1已读',
+  `created_time` datetime DEFAULT NULL,
+  `read_time` datetime DEFAULT NULL,
+  PRIMARY KEY (`id`) USING BTREE
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='系统消息表';
+
 SET FOREIGN_KEY_CHECKS = 1;

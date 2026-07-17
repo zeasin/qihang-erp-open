@@ -120,6 +120,8 @@
         </el-card>
       </el-col>
     </el-row>
+
+
   </div>
 </template>
 
@@ -142,6 +144,8 @@ const brief = ref<AiBriefResponse>({
   quickStats: { salesVolume: '', orderCount: 0, waitShip: 0 },
   priorities: [],
 })
+
+
 
 function goLink(link: string) {
   if (link) {
