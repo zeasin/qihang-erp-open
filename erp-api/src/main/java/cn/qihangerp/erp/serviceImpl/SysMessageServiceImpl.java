@@ -23,7 +23,11 @@ public class SysMessageServiceImpl implements ISysMessageService {
         if (msg.getCreatedTime() == null) {
             msg.setCreatedTime(LocalDateTime.now());
         }
-        mapper.insert(msg);
+        if (msg.getId() != null) {
+            mapper.updateById(msg);
+        } else {
+            mapper.insert(msg);
+        }
     }
 
     @Override
@@ -49,6 +53,17 @@ public class SysMessageServiceImpl implements ISysMessageService {
             m.setReadTime(LocalDateTime.now());
             mapper.updateById(m);
         }
+    }
+
+    @Override
+    public List<SysMessage> getFailedNotify() {
+        LambdaQueryWrapper<SysMessage> w = new LambdaQueryWrapper<>();
+        w.eq(SysMessage::getNeedNotify, 1);
+        w.eq(SysMessage::getNotifyStatus, 2);
+        w.lt(SysMessage::getNotifyTime, LocalDateTime.now().minusMinutes(10));
+        w.orderByAsc(SysMessage::getNotifyTime);
+        w.last("LIMIT 20");
+        return mapper.selectList(w);
     }
 
     @Override

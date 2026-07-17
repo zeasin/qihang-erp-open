@@ -10,4 +10,5 @@ public interface ISysMessageService {
     long countUnread();
     void markRead(Long id);
     void markAllRead();
+    List<SysMessage> getFailedNotify();
 }

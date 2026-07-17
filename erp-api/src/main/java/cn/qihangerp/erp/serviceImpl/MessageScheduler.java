@@ -1,5 +1,6 @@
 package cn.qihangerp.erp.serviceImpl;
 
+import cn.qihangerp.erp.notify.NotifierService;
 import cn.qihangerp.erp.serviceImpl.ai.AiOrchestrationService;
 import cn.qihangerp.erp.serviceImpl.ai.InventoryTools;
 import cn.qihangerp.erp.serviceImpl.ai.RefundTools;
@@ -9,6 +10,7 @@ import cn.qihangerp.model.vo.SalesDailyVo;
 import cn.qihangerp.service.ISysMessageService;
 import cn.qihangerp.service.OOrderService;
 import cn.qihangerp.service.ShopRefundService;
+import cn.qihangerp.sse.SseService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +19,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -31,13 +35,31 @@ public class MessageScheduler {
     private final AiOrchestrationService orchestrationService;
     private final RefundTools refundTools;
     private final InventoryTools inventoryTools;
+    private final NotifierService notifierService;
+    private final SseService sseService;
+
+    private static final List<String> NEED_NOTIFY_TYPES = List.of("stock_low", "order_timeout", "ai_analysis");
 
     @Scheduled(fixedRate = 1800000)
     public void run() {
         checkSalesZero();
         checkShipPending();
         checkRefundExcess();
+        checkStockLow();
+        checkOrderTimeout();
         checkAiAnalysis();
+    }
+
+    @Scheduled(fixedRate = 600000)
+    public void retryFailedNotify() {
+        List<SysMessage> failed = messageService.getFailedNotify();
+        for (SysMessage msg : failed) {
+            boolean allOk = notifierService.notifyAll(msg.getTitle(), msg.getContent());
+            msg.setNotifyStatus(allOk ? 1 : 2);
+            msg.setNotifyTime(LocalDateTime.now());
+            messageService.save(msg);
+        }
+        if (!failed.isEmpty()) log.info("重试推送 {} 条消息", failed.size());
     }
 
     private void checkSalesZero() {
@@ -58,6 +80,16 @@ public class MessageScheduler {
         long count = refundService.count(w);
         if (count < 20) return;
         save("refund_excess", "medium", "退款过多提醒", "近30天退款" + count + "单，请关注退款原因", "/sale/shop_refund", "system");
+    }
+
+    private void checkStockLow() {
+        // TODO: query OGoodsSku with lowQty > availableQuantity
+        // save("stock_low", "high", "库存不足: 商品名", "SKU xxx 库存仅剩 n 件")
+    }
+
+    private void checkOrderTimeout() {
+        // TODO: query OOrder with status 0/1 and createTime > 4h
+        // save("order_timeout", "medium", "发货超时提醒", "n 个订单超过 4 小时未发货")
     }
 
     private void checkAiAnalysis() {
@@ -88,6 +120,8 @@ public class MessageScheduler {
     }
 
     private void save(String type, String level, String title, String content, String link, String source) {
+        boolean needNotify = "high".equals(level) || NEED_NOTIFY_TYPES.contains(type);
+
         SysMessage m = new SysMessage();
         m.setType(type);
         m.setLevel(level);
@@ -96,8 +130,22 @@ public class MessageScheduler {
         m.setLink(link);
         m.setSource(source);
         m.setIsRead(0);
+        m.setNeedNotify(needNotify ? 1 : 0);
+        m.setNotifyStatus(0);
         m.setCreatedTime(LocalDateTime.now());
         messageService.save(m);
-        log.info("消息: [{}] {}", level, title);
+
+        if (needNotify) {
+            boolean allOk = notifierService.notifyAll(title, content);
+            m.setNotifyStatus(allOk ? 1 : 2);
+            m.setNotifyTime(LocalDateTime.now());
+            messageService.save(m);
+        }
+
+        sseService.broadcastMessage("message", Map.of(
+                "type", type, "level", level,
+                "title", title, "content", content, "id", m.getId()));
+
+        log.info("消息: [{}] {} (needNotify={})", level, title, needNotify);
     }
 }

@@ -7256,6 +7256,13 @@ INSERT INTO `sys_menu` VALUES (2177, 'AI 智能', 0, 70, '/ai', 'Layout', '', 1,
 INSERT INTO `sys_menu` VALUES (2178, '模型配置', 2177, 1, 'config', 'ai/config', '', 1, 0, 'C', '0', '0', 'ai:config:list', 'example', 'admin', NOW(), '', NULL, 'AI模型配置');
 -- 子菜单：智能分析（parent_id=2177, order_num=2）
 INSERT INTO `sys_menu` VALUES (2179, '智能分析', 2177, 2, 'analysis', 'ai/analysis', '', 1, 0, 'C', '0', '0', 'ai:analysis:list', 'chart', 'admin', NOW(), '', NULL, 'AI智能分析');
+-- 通知渠道配置菜单（放在系统设置 parent_id=5 下，order_num=3）
+INSERT INTO `sys_menu` VALUES (2180, '通知渠道', 5, 3, 'alertChannel', 'system/alertChannel/index', '', 1, 0, 'C', '0', '0', '', 'message', 'admin', NOW(), '', NULL, '通知渠道配置');
+
+
+
+
+
 -- ----------------------------
 -- Table structure for sys_open_auth
 -- ----------------------------
@@ -7893,16 +7900,36 @@ CREATE TABLE `ai_config` (
 DROP TABLE IF EXISTS `sys_message`;
 CREATE TABLE `sys_message` (
   `id` bigint NOT NULL AUTO_INCREMENT,
-  `type` varchar(50) NOT NULL COMMENT '消息类型：sales_zero-销售额为零, ship_pending-发货积压, refund_excess-退款过多, ai_analysis-AI分析',
+  `type` varchar(50) NOT NULL COMMENT '消息类型：sales_zero-销售额为零, ship_pending-发货积压, refund_excess-退款过多, stock_low-库存不足, order_timeout-发货超时, ai_analysis-AI分析',
   `level` varchar(10) NOT NULL COMMENT '级别：high/medium/low',
   `title` varchar(200) NOT NULL COMMENT '消息标题',
   `content` text COMMENT '消息内容',
   `link` varchar(500) DEFAULT NULL COMMENT '跳转链接',
   `source` varchar(50) DEFAULT 'system' COMMENT '来源：ai/system',
   `is_read` int DEFAULT 0 COMMENT '是否已读：0未读 1已读',
+  `need_notify` tinyint(1) DEFAULT 0 COMMENT '是否需要外部通知：0否 1是',
+  `notify_status` tinyint DEFAULT 0 COMMENT '外部通知状态：0未推送 1已推送 2推送失败',
+  `notify_time` datetime DEFAULT NULL COMMENT '最近一次外部推送时间',
   `created_time` datetime DEFAULT NULL,
   `read_time` datetime DEFAULT NULL,
-  PRIMARY KEY (`id`) USING BTREE
+  PRIMARY KEY (`id`) USING BTREE,
+  KEY `idx_notify` (`need_notify`,`notify_status`,`created_time`) USING BTREE
 ) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8mb4 COMMENT='系统消息表';
+
+-- ----------------------------
+-- Table structure for sys_alert_channel
+-- ----------------------------
+DROP TABLE IF EXISTS `sys_alert_channel`;
+CREATE TABLE `sys_alert_channel` (
+  `id`           bigint       NOT NULL AUTO_INCREMENT,
+  `channel_type` varchar(20)  NOT NULL COMMENT '渠道：FEISHU / DINGTALK / WECHAT',
+  `channel_name` varchar(100) NOT NULL COMMENT '渠道名称（如：运营群）',
+  `webhook_url`  varchar(500) NOT NULL COMMENT 'Webhook 地址',
+  `secret`       varchar(200) DEFAULT NULL COMMENT '签名密钥（钉钉用）',
+  `status`       tinyint      DEFAULT 1 COMMENT '0禁用 1启用',
+  `create_time`  datetime     DEFAULT NULL,
+  `update_time`  datetime     DEFAULT NULL,
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='外部通知渠道配置表';
 
 SET FOREIGN_KEY_CHECKS = 1;

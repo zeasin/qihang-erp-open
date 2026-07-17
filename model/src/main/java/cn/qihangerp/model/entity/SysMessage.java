@@ -19,6 +19,9 @@ public class SysMessage {
     private String link;
     private String source;
     private Integer isRead;
+    private Integer needNotify;
+    private Integer notifyStatus;
+    private LocalDateTime notifyTime;
     private LocalDateTime createdTime;
     private LocalDateTime readTime;
 }

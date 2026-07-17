@@ -63,6 +63,9 @@ const viewsMap: Record<string, () => Promise<any>> = {
   // afterSale
   'afterSale/index': () => import('@/views/afterSale/index.vue'),
 
+  // alert
+  'system/alertChannel/index': () => import('@/views/system/alertChannel/index.vue'),
+
   // ai
   'ai/config': () => import('@/views/ai/config.vue'),
 
