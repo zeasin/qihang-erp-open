@@ -11,8 +11,8 @@ import cn.qihangerp.model.entity.ShopOrderItem;
 import cn.qihangerp.model.query.ShopOrderQueryBo;
 import cn.qihangerp.model.request.OrderPullRequest;
 import cn.qihangerp.security.common.BaseController;
-import cn.qihangerp.service.OOrderService;
 import cn.qihangerp.service.ShopOrderItemService;
+import cn.qihangerp.erp.serviceImpl.ShopSyncService;
 import cn.qihangerp.service.ShopOrderService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,7 +29,7 @@ public class ShopOrderController extends BaseController {
 
     private final ShopOrderService shopOrderService;
     private final ShopOrderItemService shopOrderItemService;
-    private final OOrderService oOrderService;
+    private final ShopSyncService shopSyncService;
     private final ShopPullApiService shopPullApiService;
 
     /**
@@ -92,7 +92,7 @@ public class ShopOrderController extends BaseController {
         for (Object id : ids) {
             try {
                 Long shopOrderId = Long.parseLong(String.valueOf(id));
-                ResultVo<Long> r = oOrderService.shopOrderMessage(shopOrderId);
+                ResultVo<Long> r = shopSyncService.syncOrder(shopOrderId);
                 if (r.getCode() == 0) success++;
                 else fail++;
             } catch (Exception e) {

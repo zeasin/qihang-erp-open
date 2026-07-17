@@ -4,7 +4,6 @@ import cn.qihangerp.common.DateHelper;
 import cn.qihangerp.common.PageQuery;
 import cn.qihangerp.common.PageResult;
 import cn.qihangerp.common.ResultVo;
-import cn.qihangerp.common.mq.MqUtils;
 import cn.qihangerp.mapper.*;
 import cn.qihangerp.model.entity.*;
 import cn.qihangerp.model.request.PurchaseOrderStockInBo;
@@ -42,8 +41,6 @@ public class ErpPurchaseOrderShipServiceImpl extends ServiceImpl<ErpPurchaseOrde
     private final ErpWarehouseStockInItemService warehouseStockInItemService;
     private final ErpWarehouseStockInMapper warehouseStockInMapper;
 
-    private final MqUtils mqUtils;
-    
     @Override
     public PageResult<ErpPurchaseOrderShip> queryPageList(SearchRequest bo, PageQuery pageQuery) {
         if(org.springframework.util.StringUtils.hasText(bo.getStartTime())){

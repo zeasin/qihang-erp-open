@@ -5,11 +5,11 @@ import lombok.Data;
 
 @Data
 public class MqMessage {
-    private int mqType;// 消息类型（1：订单消息；2：退款消息）
+    private int mqType;
     private EnumShopType shopType;
     private String keyId;
-    private String data1;//数据1 -快递公司
-    private String data2;//数据2 -物流单号
+    private String data1;
+    private String data2;
 
     public static MqMessage build(EnumShopType shopType,int mqType ,  String keyId){
         MqMessage result = new MqMessage();

@@ -9,8 +9,8 @@ import cn.qihangerp.erp.service.ShopPullApiService;
 import cn.qihangerp.model.entity.ShopRefund;
 import cn.qihangerp.model.request.RefundPullRequest;
 import cn.qihangerp.security.common.BaseController;
-import cn.qihangerp.service.ORefundService;
 import cn.qihangerp.service.ShopRefundService;
+import cn.qihangerp.erp.serviceImpl.ShopSyncService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.StringUtils;
@@ -26,7 +26,7 @@ import java.util.Map;
 public class ShopRefundController extends BaseController {
 
     private final ShopRefundService shopRefundService;
-    private final ORefundService oRefundService;
+    private final ShopSyncService shopSyncService;
     private final ShopPullApiService shopPullApiService;
 
     @GetMapping("/list")
@@ -78,7 +78,7 @@ public class ShopRefundController extends BaseController {
         for (Object id : ids) {
             try {
                 Long shopRefundId = Long.parseLong(String.valueOf(id));
-                ResultVo<Long> r = oRefundService.shopRefundMessage(shopRefundId);
+                ResultVo<Long> r = shopSyncService.syncRefund(shopRefundId);
                 if (r.getCode() == 0) success++;
                 else fail++;
             } catch (Exception e) {

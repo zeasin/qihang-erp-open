@@ -75,8 +75,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
     private final ShopOrderService shopOrderService;
     private final ShopRefundService shopRefundService;
     private final ShopGoodsService shopGoodsService;
-    private final OOrderService oOrderService;
-    private final ORefundService oRefundService;
+    private final ShopSyncService shopSyncService;
     private final OShopPullLogsService pullLogsService;
     private final OShopPullLasttimeService pullLasttimeService;
 
@@ -162,7 +161,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             int ins = 0, upd = 0, fail = 0;
             if (r.getData() != null && r.getData().getOrderList() != null) for (var t : r.getData().getOrderList()) {
                 try { var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), toOrder(t));
-                    if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+                    if (sr.getData() != null && sr.getData() > 0) shopSyncService.syncOrder(sr.getData());
                     if (sr.getCode() == 0) ins++; else if (sr.getCode() == 1800) upd++; else fail++;
                 } catch (Exception ex) { log.error("PDD订单保存失败", ex); fail++; }
             }
@@ -176,7 +175,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             var r = PddOrderApiHelper.pullOrderDetail(p.getAppKey(), p.getAppSecret(), p.getAccessToken(), orderId);
             if (r.getCode() != 0) return errLog(shop, "ORDER", r.getMsg(), "{orderId:" + orderId + "}", begin);
             var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), toOrder(r.getData()));
-            if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+            if (sr.getData() != null && sr.getData() > 0) shopSyncService.syncOrder(sr.getData());
             logMsg(shop, "ORDER", "{orderId:" + orderId + "}", "{}", begin);
             return ResultVo.success("订单[" + orderId + "]同步完成");
         } catch (Exception ex) { return err(shop, "ORDER", "PDD detail:" + ex.getMessage(), begin); }
@@ -219,7 +218,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             int ins = 0, fail = 0;
             if (r.getList() != null) for (var rf : r.getList()) {
                 try { var rr = shopRefundService.saveRefund(shop.getId(), toRefund(rf));
-                    if (rr.getData() != null) { oRefundService.shopRefundMessage(rr.getData()); ins++; } else fail++;
+                    if (rr.getData() != null) { shopSyncService.syncRefund(rr.getData()); ins++; } else fail++;
                 } catch (Exception ex) { fail++; log.error("PDD退款保存失败", ex); }
             }
             if (fail == 0) upsertLt(shop.getId(), "REFUND", et, lt);
@@ -247,7 +246,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             var r = PddRefundApiHelper.pullRefundDetil(p.getAppKey(), p.getAppSecret(), p.getAccessToken(), afterId, null);
             if (r.getCode() != 0) return errLog(shop, "REFUND", r.getMsg(), "{afterId:" + afterId + "}", begin);
             var rr = shopRefundService.saveRefund(shop.getId(), toRefund(r.getData()));
-            if (rr.getData() != null) oRefundService.shopRefundMessage(rr.getData());
+            if (rr.getData() != null) shopSyncService.syncRefund(rr.getData());
             logMsg(shop, "REFUND", "{afterId:" + afterId + "}", "{}", begin);
             return ResultVo.success("售后[" + afterId + "]同步完成");
         } catch (Exception ex) { return err(shop, "REFUND", "PDD detail:" + ex.getMessage(), begin); }
@@ -293,7 +292,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             int ins = 0, upd = 0, fail = 0;
             if (r.getList() != null) for (Object tObj : r.getList()) {
                 try { var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), taoOrder((JSONObject)(Object)tObj));
-                    if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+                    if (sr.getData() != null && sr.getData() > 0) shopSyncService.syncOrder(sr.getData());
                     if (sr.getCode() == 0) ins++; else upd++;
                 } catch (Exception ex) { log.error("TAO订单保存失败", ex); fail++; }
             }
@@ -336,7 +335,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             var r = TaoOrderApiHelper.pullOrderDetail(orderId, p.getAppKey(), p.getAppSecret(), p.getAccessToken());
             if (r.getCode() != 0 || r.getList() == null || r.getList().isEmpty()) return errLog(shop, "ORDER", r.getMsg(), "{orderId:" + orderId + "}", begin);
             var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), taoOrder((JSONObject)(Object)r.getList().get(0)));
-            if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+            if (sr.getData() != null && sr.getData() > 0) shopSyncService.syncOrder(sr.getData());
             logMsg(shop, "ORDER", "{orderId:" + orderId + "}", "{}", begin);
             return ResultVo.success("订单[" + orderId + "]同步完成");
         } catch (Exception ex) { return err(shop, "ORDER", "TAO detail:" + ex.getMessage(), begin); }
@@ -353,7 +352,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             int ins = 0, fail = 0;
             if (r.getList() != null) for (Object rfObj : r.getList()) {
                 try { var rr = shopRefundService.saveRefund(shop.getId(), taoRefund((JSONObject)(Object)rfObj));
-                    if (rr.getData() != null) { oRefundService.shopRefundMessage(rr.getData()); ins++; } else fail++;
+                    if (rr.getData() != null) { shopSyncService.syncRefund(rr.getData()); ins++; } else fail++;
                 } catch (Exception ex) { log.error("TAO退款保存失败", ex); fail++; }
             }
             if (fail == 0) upsertLt(shop.getId(), "REFUND", et, lt);
@@ -379,7 +378,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             var r = TaoRefundApiHelper.pullRefundDetail(Long.parseLong(refundId), p.getAppKey(), p.getAppSecret(), p.getAccessToken());
             if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "REFUND", r.getMsg(), "{refundId:" + refundId + "}", begin);
             var rr = shopRefundService.saveRefund(shop.getId(), taoRefund((JSONObject)(Object)r.getData()));
-            if (rr.getData() != null) oRefundService.shopRefundMessage(rr.getData());
+            if (rr.getData() != null) shopSyncService.syncRefund(rr.getData());
             logMsg(shop, "REFUND", "{refundId:" + refundId + "}", "{}", begin);
             return ResultVo.success("售后[" + refundId + "]同步完成");
         } catch (Exception ex) { return err(shop, "REFUND", "TAO detail:" + ex.getMessage(), begin); }
@@ -425,7 +424,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             int ins = 0, upd = 0, fail = 0;
             if (r.getList() != null) for (var t : r.getList()) {
                 try { var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), jdOrder(t));
-                    if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+                    if (sr.getData() != null && sr.getData() > 0) shopSyncService.syncOrder(sr.getData());
                     if (sr.getCode() == 0) ins++; else upd++;
                 } catch (Exception ex) { log.error("JD订单保存失败", ex); fail++; }
             }
@@ -476,7 +475,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             var r = JdOrderApiHelper.pullOrderDetail(Long.parseLong(orderId), p.getAppKey(), p.getAppSecret(), p.getAccessToken());
             if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "ORDER", r.getMsg(), "{orderId:" + orderId + "}", begin);
             var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), jdOrder(r.getData()));
-            if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+            if (sr.getData() != null && sr.getData() > 0) shopSyncService.syncOrder(sr.getData());
             logMsg(shop, "ORDER", "{orderId:" + orderId + "}", "{}", begin);
             return ResultVo.success("订单[" + orderId + "]同步完成");
         } catch (Exception ex) { return err(shop, "ORDER", "JD detail:" + ex.getMessage(), begin); }
@@ -523,7 +522,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             if (r.getList() != null) for (var rf : r.getList()) {
                 try { ShopRefund sr = jdRefund(rf);
                     var rr = shopRefundService.saveRefund(shop.getId(), sr);
-                    if (rr.getData() != null) { oRefundService.shopRefundMessage(rr.getData()); ins++; } else fail++;
+                    if (rr.getData() != null) { shopSyncService.syncRefund(rr.getData()); ins++; } else fail++;
                 } catch (Exception ex) { log.error("JD退款保存失败", ex); fail++; }
             }
             if (fail == 0) upsertLt(shop.getId(), "REFUND", et, lt);
@@ -544,7 +543,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             }
             if (found == null) return ResultVo.error("未找到售后单");
             var rr = shopRefundService.saveRefund(shop.getId(), jdRefund(found));
-            if (rr.getData() != null) oRefundService.shopRefundMessage(rr.getData());
+            if (rr.getData() != null) shopSyncService.syncRefund(rr.getData());
             logMsg(shop, "REFUND", "{afterId:" + afterId + "}", "{}", begin);
             return ResultVo.success("售后[" + afterId + "]同步完成");
         } catch (Exception ex) { return err(shop, "REFUND", "JD detail:" + ex.getMessage(), begin); }
@@ -592,7 +591,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             int ins = 0, upd = 0, fail = 0;
             if (r.getList() != null) for (var order : r.getList()) {
                 try { var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), douOrder(order));
-                    if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+                    if (sr.getData() != null && sr.getData() > 0) shopSyncService.syncOrder(sr.getData());
                     if (sr.getCode() == 0) ins++; else upd++;
                 } catch (Exception ex) { log.error("DOU订单保存失败", ex); fail++; }
             }
@@ -656,7 +655,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             var r = DouOrderApiHelper.pullOrderDetail(p.getAppKey(), p.getAppSecret(), p.getAccessToken(), orderId);
             if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "ORDER", r.getMsg(), "{orderId:" + orderId + "}", begin);
             var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), douOrder(r.getData()));
-            if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+            if (sr.getData() != null && sr.getData() > 0) shopSyncService.syncOrder(sr.getData());
             logMsg(shop, "ORDER", "{orderId:" + orderId + "}", "{}", begin);
             return ResultVo.success("订单[" + orderId + "]同步完成");
         } catch (Exception ex) { return err(shop, "ORDER", "DOU detail:" + ex.getMessage(), begin); }
@@ -674,7 +673,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             if (r.getList() != null) for (var rf : r.getList()) {
                 try { ShopRefund sr = douRefund(rf);
                     var rr = shopRefundService.saveRefund(shop.getId(), sr);
-                    if (rr.getData() != null) { oRefundService.shopRefundMessage(rr.getData()); ins++; } else fail++;
+                    if (rr.getData() != null) { shopSyncService.syncRefund(rr.getData()); ins++; } else fail++;
                 } catch (Exception ex) { log.error("DOU退款保存失败", ex); fail++; }
             }
             if (fail == 0) upsertLt(shop.getId(), "REFUND", et, lt);
@@ -764,7 +763,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             int ins = 0, upd = 0, fail = 0;
             if (r.getList() != null) for (var t : r.getList()) {
                 try { var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), weiOrder(t));
-                    if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+                    if (sr.getData() != null && sr.getData() > 0) shopSyncService.syncOrder(sr.getData());
                     if (sr.getCode() == 0) ins++; else upd++;
                 } catch (Exception ex) { log.error("WEI订单保存失败", ex); fail++; }
             }
@@ -824,7 +823,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             var r = WeiOrderApiHelper.pullOrderDetail(Long.parseLong(orderId), p.getAccessToken());
             if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "ORDER", r.getMsg(), "{orderId:" + orderId + "}", begin);
             var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), weiOrder(r.getData()));
-            if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+            if (sr.getData() != null && sr.getData() > 0) shopSyncService.syncOrder(sr.getData());
             logMsg(shop, "ORDER", "{orderId:" + orderId + "}", "{}", begin);
             return ResultVo.success("订单[" + orderId + "]同步完成");
         } catch (Exception ex) { return err(shop, "ORDER", "WEI detail:" + ex.getMessage(), begin); }
@@ -842,7 +841,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             int ins = 0, fail = 0;
             if (r.getList() != null) for (var rf : r.getList()) {
                 try { var rr = shopRefundService.saveRefund(shop.getId(), weiRefund(rf));
-                    if (rr.getData() != null) { oRefundService.shopRefundMessage(rr.getData()); ins++; } else fail++;
+                    if (rr.getData() != null) { shopSyncService.syncRefund(rr.getData()); ins++; } else fail++;
                 } catch (Exception ex) { log.error("WEI退款保存失败", ex); fail++; }
             }
             if (fail == 0) upsertLt(shop.getId(), "REFUND", et, lt);
@@ -856,7 +855,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             var r = WeiRefundApiHelper.pullRefundDetail(Long.parseLong(afterId), p.getAccessToken());
             if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "REFUND", r.getMsg(), "{afterId:" + afterId + "}", begin);
             var rr = shopRefundService.saveRefund(shop.getId(), weiRefund(r.getData()));
-            if (rr.getData() != null) oRefundService.shopRefundMessage(rr.getData());
+            if (rr.getData() != null) shopSyncService.syncRefund(rr.getData());
             logMsg(shop, "REFUND", "{afterId:" + afterId + "}", "{}", begin);
             return ResultVo.success("售后[" + afterId + "]同步完成");
         } catch (Exception ex) { return err(shop, "REFUND", "WEI detail:" + ex.getMessage(), begin); }
@@ -948,7 +947,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             if (r.getList() != null) for (var t : r.getList()) {
                 try { ShopOrder o = kwaiOrder(t);
                     var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), o);
-                    if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+                    if (sr.getData() != null && sr.getData() > 0) shopSyncService.syncOrder(sr.getData());
                     if (sr.getCode() == 0) ins++; else upd++;
                 } catch (Exception ex) { log.error("KWAI订单保存失败", ex); fail++; }
             }
@@ -1000,7 +999,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             var r = KwaiOrderApiHelper.pullOrderDetail(p.getAppKey(), p.getAppSecret(), p.getAppSecret(), p.getAccessToken(), orderId);
             if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "ORDER", r.getMsg(), "{orderId:" + orderId + "}", begin);
             var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), kwaiOrder(r.getData()));
-            if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+            if (sr.getData() != null && sr.getData() > 0) shopSyncService.syncOrder(sr.getData());
             logMsg(shop, "ORDER", "{orderId:" + orderId + "}", "{}", begin);
             return ResultVo.success("订单[" + orderId + "]同步完成");
         } catch (Exception ex) { return err(shop, "ORDER", "KWAI detail:" + ex.getMessage(), begin); }
@@ -1019,7 +1018,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             int ins = 0, fail = 0;
             if (r.getList() != null) for (var rf : r.getList()) {
                 try { var rr = shopRefundService.saveRefund(shop.getId(), kwaiRefund(rf));
-                    if (rr.getData() != null) { oRefundService.shopRefundMessage(rr.getData()); ins++; } else fail++;
+                    if (rr.getData() != null) { shopSyncService.syncRefund(rr.getData()); ins++; } else fail++;
                 } catch (Exception ex) { log.error("KWAI退款保存失败", ex); fail++; }
             }
             if (fail == 0) upsertLt(shop.getId(), "REFUND", et, lt);
@@ -1096,7 +1095,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             int ins = 0, upd = 0, fail = 0;
             if (r.getList() != null) for (var t : r.getList()) {
                 try { var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), xhsOrder(t));
-                    if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+                    if (sr.getData() != null && sr.getData() > 0) shopSyncService.syncOrder(sr.getData());
                     if (sr.getCode() == 0) ins++; else upd++;
                 } catch (Exception ex) { log.error("XHS订单保存失败", ex); fail++; }
             }
@@ -1151,7 +1150,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             var r = xhsOrderApiHelper.getOrderDetailVo(p.getAppKey(), p.getAppSecret(), p.getAccessToken(), orderId);
             if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "ORDER", r.getMsg(), "{orderId:" + orderId + "}", begin);
             var sr = shopOrderService.saveOrder(shop.getId(), shop.getMerchantId(), shop.getType(), xhsOrder(r.getData()));
-            if (sr.getData() != null && sr.getData() > 0) oOrderService.shopOrderMessage(sr.getData());
+            if (sr.getData() != null && sr.getData() > 0) shopSyncService.syncOrder(sr.getData());
             logMsg(shop, "ORDER", "{orderId:" + orderId + "}", "{}", begin);
             return ResultVo.success("订单[" + orderId + "]同步完成");
         } catch (Exception ex) { return err(shop, "ORDER", "XHS detail:" + ex.getMessage(), begin); }
@@ -1168,7 +1167,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             int ins = 0, fail = 0;
             if (r.getList() != null) for (var rf : r.getList()) {
                 try { var rr = shopRefundService.saveRefund(shop.getId(), xhsRefund(rf));
-                    if (rr.getData() != null) { oRefundService.shopRefundMessage(rr.getData()); ins++; } else fail++;
+                    if (rr.getData() != null) { shopSyncService.syncRefund(rr.getData()); ins++; } else fail++;
                 } catch (Exception ex) { log.error("XHS退款保存失败", ex); fail++; }
             }
             if (fail == 0) upsertLt(shop.getId(), "REFUND", et, lt);
@@ -1182,7 +1181,7 @@ public class ShopPullApiServiceImpl implements ShopPullApiService {
             var r = xhsRefundApiHelper.getRefundDetailVo(p.getAppKey(), p.getAppSecret(), p.getAccessToken(), afterId);
             if (r.getCode() != 0 || r.getData() == null) return errLog(shop, "REFUND", r.getMsg(), "{afterId:" + afterId + "}", begin);
             var rr = shopRefundService.saveRefund(shop.getId(), xhsRefund(r.getData()));
-            if (rr.getData() != null) oRefundService.shopRefundMessage(rr.getData());
+            if (rr.getData() != null) shopSyncService.syncRefund(rr.getData());
             logMsg(shop, "REFUND", "{afterId:" + afterId + "}", "{}", begin);
             return ResultVo.success("售后[" + afterId + "]同步完成");
         } catch (Exception ex) { return err(shop, "REFUND", "XHS detail:" + ex.getMessage(), begin); }

@@ -18,7 +18,6 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.qihangerp.common.PageQuery;
 import cn.qihangerp.common.PageResult;
-import cn.qihangerp.common.mq.MqUtils;
 import cn.qihangerp.request.OrderSearchRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +48,6 @@ public class ErpSalesOrderServiceImpl extends ServiceImpl<ErpSalesOrderMapper, E
     private final OShopService shopService;
     private final ErpMerchantService merchantService;
     private final ErpSalesGoodsPackageService packageService;
-    private final MqUtils mqUtils;
     private final ErpMerchantGoodsPriceService merchantGoodsPriceService;
     private final OGoodsSkuMapper goodsSkuMapper;
     
