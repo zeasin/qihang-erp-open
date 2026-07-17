@@ -399,3 +399,145 @@ vue3/src/
 ```
 
 **核心原则：** 每个阶段交付用户能感知的价值，不追求一步到位。
+
+---
+
+## 十、详细实施计划
+
+> 基于 AI 场景全集（82 个）和 AI 基础设施设计（7 层），按最小可行 → 逐步增强的原则排期。
+
+### 阶段零：基础设施准备（1 周）
+
+**目标：** AI 能跑起来，用户可以配置模型参数
+
+| 任务 | 产出 | 工时 |
+|------|------|------|
+| `ai_config` 表 + 实体/Mapper/Service | 持久化 API Key、Endpoint、Model | 0.5天 |
+| `AiConfigController` | CRUD API，vue3 配置页已有直接对接 | 0.5天 |
+| `AiModelService` 接口 + DeepSeek 实现 | 统一模型调用抽象，支持降级 | 0.5天 |
+
+**完成后用户能感知的：** 配置页填好 API Key → 首页 AI 简报恢复正常工作
+
+---
+
+### 阶段一：核心对话能力（1 周）
+
+**目标：** 用户在任何页面都能跟 AI 对话
+
+| 任务 | 产出 | 工时 |
+|------|------|------|
+| `ai_conversation` + `ai_message` 表 | 会话/消息持久化 | 0.5天 |
+| `ConversationManager` | 会话创建、续聊、历史记录、窗口截断 | 1天 |
+| `AiConversationController` | 对话 CRUD + SSE 流式对话接口 | 0.5天 |
+| `AiFloatingChat.vue` 全局浮窗组件 | 悬浮按钮 → 弹出对话面板 → SSE 流式渲染 Markdown | 1.5天 |
+| `useAiChat.ts` 组合式函数 | 封装 SSE 连接、历史消息、Tool 结果展示 | 0.5天 |
+
+**完成后用户能感知的：**
+- 所有页面右下角有个 AI 悬浮按钮
+- 点开可以打字问问题，AI 流式回复
+- 可以查历史对话
+
+---
+
+### 阶段二：Tool 系统 + 首批能力（1.5 周）
+
+**目标：** AI 能查数据、能做事
+
+#### 二-A：Tool 基础设施
+
+| 任务 | 产出 | 工时 |
+|------|------|------|
+| `AiTool` 接口 + `ToolRegistry` + `ToolExecutor` | Tool 注册、执行引擎 | 1天 |
+| `ToolPermissionChecker` | 权限校验（菜单/按钮权限 + merchant_id 过滤） | 0.5天 |
+| `ConfirmationFlow` | 操作确认流：用户前端弹窗 yes/no 后执行 | 0.5天 |
+| 操作日志集成 | AI 执行的操作写入 `sys_oper_log` | 0.5天 |
+| `AiToolConfirm.vue` 确认弹窗组件 | 显示操作详情 + 确认/取消按钮 | 0.5天 |
+
+#### 二-B：首批 Tool 实现
+
+| Tool | 类型 | 核心逻辑 | 工时 |
+|------|------|---------|------|
+| `getOrderInfo(orderNum)` | 查询 | 查 `o_order` + items + 物流 | 0.5天 |
+| `getGoodsInfo(goodsId)` | 查询 | 查 `o_goods` + SKUs + 库存 | 0.5天 |
+| `getInventory(skuId)` | 查询 | 查 `o_goods_inventory` 各仓库分布 | 0.3天 |
+| `searchOrder(keyword)` | 搜索 | 模糊搜订单号/商品名/收件人 | 0.3天 |
+| `searchGoods(keyword)` | 搜索 | 模糊搜商品名/SKU 编码 | 0.3天 |
+| `getRefundInfo(refundNum)` | 查询 | 查 `o_refund` 详情 + 处理状态 | 0.3天 |
+| `getLogisticsTrace(waybillCode)` | 查询 | 调物流轨迹 API 返回结果 | 0.3天 |
+| `getSalesTrend(days)` | 分析 | 近 N 天销售额/订单量趋势 | 0.5天 |
+| `createPurchaseOrder(args)` | 操作 | 创建采购单草稿，需确认后提交 | 0.5天 |
+| `updateOrderAddress(orderNum, args)` | 操作 | 修改收货地址，需确认 | 0.3天 |
+| `addOrderRemark(orderNum, text)` | 操作 | 加备注，可逆操作 | 0.3天 |
+
+**安全规则：**
+- 查询型 Tool：自动追加 `merchant_id` 过滤 → 只能看自己商户的数据
+- 操作型 Tool：前端弹确认框 → 记录操作日志 → 优先可逆操作
+
+**完成后用户能感知的：**
+- 🚑 "查一下订单 OD001" → AI 返回订单详情和状态
+- 🚑 "SKU-001 库存多少" → AI 返回各仓库库存
+- 🤖 "帮我建个采购单，SKU-001 补 50 个" → AI 生成草稿，用户确认后提交
+
+---
+
+### 阶段三：通知中心 + 主动预警（1.5 周）
+
+**目标：** 系统主动推送问题
+
+| 任务 | 产出 | 工时 |
+|------|------|------|
+| 4 张预警表（`alert_rule_config` / `alert_channel_config` / `alert_message_log` / `alert_dedup_cache`） | 实体/Mapper/Service + 初始化数据 | 0.5天 |
+| `AlertRuleScanner` 接口 + `AlertEngine` 调度器 | 插件式扫描器 + 去重/分发 | 1天 |
+| 首批扫描器：`StockAlertScanner` + `OrderShipTimeoutScanner` | 库存预警 + 发货超时预警 | 1天 |
+| `AiNotificationBell.vue` 顶部铃铛组件 | 未读角标 + 下拉列表 | 0.5天 |
+| 通知列表页 + SSE 实时推送 | 完整通知页面 | 0.5天 |
+| 预警规则/渠道配置管理页面 | 启用/禁用/阈值设置 | 0.5天 |
+
+**完成后用户能感知的：**
+- 🎯 首页通知铃铛显示"库存告急 3 条，订单超时 5 条"
+- 🎯 点开能看到具体哪些 SKU 库存不足、哪些订单超时
+- 🔍 系统主动通知，不用等用户来问
+
+---
+
+### 阶段四：AI 增强预警 + 更多 Tool（2 周）
+
+**目标：** 预警消息加上 AI 解读，更多操作场景
+
+| 任务 | 产出 | 工时 |
+|------|------|------|
+| `AlertEnhancer` — 预警数据 → AI 生成解读 | 扫描结果传给 DeepSeek，返回原因+建议 | 1天 |
+| 更多扫描器：`RefundTimeoutScanner` / `LogisticsAbnormalScanner` / `PurchaseOrderTimeoutScanner` | 售后超时/物流异常/采购超期 | 1.5天 |
+| 飞书/钉钉/企微渠道通知实现 | Webhook 推送 | 1天 |
+| 第二批 Tool：`getOrderInfo` `getInventory` `batchShip` `createAfterSale` `getPurchaseOrderInfo` | 更多单表原子查询+操作 | 2天 |
+
+**完成后用户能感知的：**
+- 预警通知附带 AI 分析："库存告警：SKU-001 库存仅剩 5 件，最近 7 天日均销量 8 件，预计今日断货"
+- 飞书群能收到预警消息
+- 📊 "退款率为什么高了？" → AI 分析原因 + 建议
+- 🤖 更多操作可以在对话中完成
+
+---
+
+### 阶段五：高阶能力（按需排期）
+
+| 能力 | 前置依赖 | 预估工时 |
+|------|---------|---------|
+| 📊 **跨模块综合场景**（"618复盘""一键日报"） | 更多原子 Tool + 对话记忆 | 2周 |
+| 📦 **智能供应链**（预测 + 补货 + 调拨） | 更多 Tool | 2-3周 |
+| 🧭 **RAG 操作教练**（操作手册问答） | PGVector 部署 | 2周 |
+| 🧠 **学习助手**（常用推荐/自动预填/规则学习） | Tool 系统 + 操作日志数据积累 | 2周 |
+| 🔗 **NL2SQL 智能查询** | 对话记忆 + Tool 系统 | 2-3周 |
+
+---
+
+### 总结：投入产出比
+
+| 阶段 | 工时 | 累计用户可感知场景 | 最核心的交付 |
+|------|------|------------------|-------------|
+| 零 | 1.5天 | AI 简报恢复 | 模型配置可用 |
+| 一 | 4天 | 随时对话 | AI 悬浮浮窗 |
+| 二 | 7天 | **20+ 场景** | 对话能查数据、能操作 |
+| 三 | 4天 | 30+ 场景 | 系统主动预警 |
+| 四 | 6.5天 | 50+ 场景 | 预警 AI 增强 + 更多 Tool |
+| 五 | 按需 | 80+ 场景 | 高阶能力 |
