@@ -1,8 +1,8 @@
 # 启航电商ERP — 外部提醒通知系统设计
 
-> **日期**：2026-07-17 | **版本**：v2（简化版）
+> **日期**：2026-07-17 | **版本**：v2（实现文档）
 > **基于**：qihang-erp-open v4.1.0
-> **状态**：设计文档
+> **状态**：已实现（`checkStockLow` / `checkOrderTimeout` 两个扫描方法为 TODO 待完成）
 
 ---
 
@@ -317,18 +317,18 @@ private void checkOrderTimeout() {
 
 ---
 
-## 六、实施计划
+## 六、实施状态
 
-| 步骤 | 内容 | 工时 |
-|------|------|------|
-| 1 | `sys_message` 加 `need_notify` / `notify_status` / `notify_time` 字段 + 更新实体 | 0.3天 |
-| 2 | 建 `sys_alert_channel` 表 + 实体/Mapper/Service | 0.5天 |
-| 3 | 渠道 Notifier（飞书/钉钉/企微） | 0.5天 |
-| 4 | `NotifierService` 整合 + 失败重试调度 | 0.5天 |
-| 5 | 扩展 `MessageScheduler.save()` + SSE 广播 | 0.3天 |
-| 6 | 新增扫描方法（库存不足 + 发货超时） | 0.5天 |
-| 7 | 前端：SSE 监听 message 事件 + Navbar 实时角标更新 | 0.5天 |
-| **合计** | | **约 3 天** |
+| 步骤 | 内容 | 工时 | 状态 |
+|------|------|------|------|
+| 1 | `sys_message` 加 `need_notify` / `notify_status` / `notify_time` 字段 + 更新实体 | 0.3天 | ✅ 已完成 |
+| 2 | 建 `sys_alert_channel` 表 + 实体/Mapper/Service | 0.5天 | ✅ 已完成 |
+| 3 | 渠道 Notifier（飞书/钉钉/企微） | 0.5天 | ✅ 已完成 |
+| 4 | `NotifierService` 整合 + 失败重试调度 | 0.5天 | ✅ 已完成 |
+| 5 | 扩展 `MessageScheduler.save()` + SSE 广播 | 0.3天 | ✅ 已完成 |
+| 6 | 新增扫描方法（库存不足 `checkStockLow` + 发货超时 `checkOrderTimeout`） | 0.5天 | ⏳ TODO（空方法体） |
+| 7 | 前端：SSE 监听 message 事件 + Navbar 实时角标更新 | 0.5天 | ✅ 已完成 |
+| **合计** | | **约 3 天** | **基本完成，余 2 个扫描方法待实现** |
 
 ---
 
