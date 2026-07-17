@@ -64,7 +64,6 @@ const viewsMap: Record<string, () => Promise<any>> = {
   'afterSale/index': () => import('@/views/afterSale/index.vue'),
 
   // ai
-  'ai/analysis': () => import('@/views/ai/analysis.vue'),
   'ai/config': () => import('@/views/ai/config.vue'),
 
   // components

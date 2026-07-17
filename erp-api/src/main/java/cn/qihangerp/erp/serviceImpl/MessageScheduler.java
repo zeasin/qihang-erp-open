@@ -1,7 +1,8 @@
 package cn.qihangerp.erp.serviceImpl;
 
 import cn.qihangerp.erp.serviceImpl.ai.AiOrchestrationService;
-import cn.qihangerp.erp.serviceImpl.ai.DataTools;
+import cn.qihangerp.erp.serviceImpl.ai.InventoryTools;
+import cn.qihangerp.erp.serviceImpl.ai.RefundTools;
 import cn.qihangerp.model.entity.ShopRefund;
 import cn.qihangerp.model.entity.SysMessage;
 import cn.qihangerp.model.vo.SalesDailyVo;
@@ -28,7 +29,8 @@ public class MessageScheduler {
     private final ShopRefundService refundService;
     private final ISysMessageService messageService;
     private final AiOrchestrationService orchestrationService;
-    private final DataTools dataTools;
+    private final RefundTools refundTools;
+    private final InventoryTools inventoryTools;
 
     @Scheduled(fixedRate = 1800000)
     public void run() {
@@ -60,14 +62,10 @@ public class MessageScheduler {
 
     private void checkAiAnalysis() {
         try {
-            ChatClient cc = orchestrationService.buildDefaultChatClient(dataTools);
+            ChatClient cc = orchestrationService.buildDefaultChatClient(refundTools, inventoryTools);
             String result = CompletableFuture.supplyAsync(() ->
                     cc.prompt().user("""
-                            你是电商运营监控助手，请使用工具检查当前是否存在异常：
-                            - getTodaySales()：今日销售数据
-                            - getWaitShipReport()：待发货统计
-                            - getRefundSummary()：退款统计
-                            - getRefundRate()：退款率
+                            你是电商运营监控助手，请查询数据检查是否存在异常：
 
                             如果有异常，按以下格式返回JSON数组，没有则返回[]：
                             {"type":"ai_analysis","level":"high","title":"异常标题","content":"异常描述"}
