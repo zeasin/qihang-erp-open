@@ -36,11 +36,11 @@ public class ErpStockOutServiceImpl extends ServiceImpl<ErpStockOutMapper, ErpSt
     private final ErpStockOutMapper outMapper;
     private final ErpStockOutItemService outItemService;
     private final ErpWarehouseService erpWarehouseService;
-    private final ErpWarehouseGoodsStockBatchService goodsStockBatchService;
-    private final ErpWarehouseGoodsStockService goodsStockService;
     private final OOrderStockingItemBatchService orderStockingItemBatchService;
     private final OOrderStockingItemService orderStockingItemService;
     private final OOrderStockingMapper orderStockingMapper;
+    private final OGoodsInventoryService oGoodsInventoryService;
+    private final OGoodsInventoryBatchService oGoodsInventoryBatchService;
 
     @Override
     public PageResult<ErpStockOut> queryPageList(ErpStockOut bo, PageQuery pageQuery) {
@@ -114,7 +114,7 @@ public class ErpStockOutServiceImpl extends ServiceImpl<ErpStockOutMapper, ErpSt
         List<ErpStockOutItem> itemList = new ArrayList<>();
         for(GoodsSkuInventoryVo item: request.getItemList()){
             if(org.springframework.util.StringUtils.hasText(item.getBatchId())) {
-                ErpWarehouseGoodsStockBatch batch = goodsStockBatchService.getById(item.getBatchId());
+                OGoodsInventoryBatch batch = oGoodsInventoryBatchService.getById(item.getBatchId());
 
                 if(batch!=null) {
                     ErpStockOutItem outItem = new ErpStockOutItem();
@@ -126,9 +126,9 @@ public class ErpStockOutServiceImpl extends ServiceImpl<ErpStockOutMapper, ErpSt
                     outItem.setBatchId(batch.getId());
                     outItem.setInventoryMode(batch.getInventoryMode());
                     outItem.setGoodsId(batch.getGoodsId());
-                    outItem.setPurPrice(batch.getPurPrice());
-                    outItem.setSkuId(batch.getGoodsId());
-                    outItem.setSkuCode(batch.getGoodsNo());
+                    outItem.setPurPrice(batch.getPurPrice() != null ? batch.getPurPrice().doubleValue() : null);
+                    outItem.setSkuId(batch.getSkuId());
+                    outItem.setSkuCode(batch.getSkuCode());
                     outItem.setGoodsName(item.getGoodsName());
                     outItem.setGoodsNum(item.getGoodsNum());
                     outItem.setSkuName(item.getSkuName());
@@ -140,7 +140,6 @@ public class ErpStockOutServiceImpl extends ServiceImpl<ErpStockOutMapper, ErpSt
                     outItem.setCreateTime(LocalDateTime.now());
                     outItem.setWarehouseId(batch.getWarehouseId());
                     outItem.setPositionId(batch.getPositionId());
-
                     outItem.setPositionNum(batch.getPositionNum());
                     itemList.add(outItem);
                 }
@@ -170,33 +169,17 @@ public class ErpStockOutServiceImpl extends ServiceImpl<ErpStockOutMapper, ErpSt
         // 判断库存够不够扣减的
         if(outItem.getBatchId()!=null) {
             /***指定了库存批次***减库存****/
-            ErpWarehouseGoodsStockBatch batch = goodsStockBatchService.getById(outItem.getBatchId());
+            OGoodsInventoryBatch batch = oGoodsInventoryBatchService.getById(outItem.getBatchId());
             if (batch == null) return ResultVo.error(1500, "库存数据不存在");
             if (batch.getCurrentQty().longValue() < request.getOutQty().longValue())
                 return ResultVo.error(1500, "库存不足");
 
-            if(StringUtils.isEmpty(batch.getRemark())) batch.setRemark("");
-            // 扣减库存
             // 1扣减批次库存
-            ErpWarehouseGoodsStockBatch updateBatch = new ErpWarehouseGoodsStockBatch();
-            updateBatch.setCurrentQty(batch.getCurrentQty() - request.getOutQty());
-            updateBatch.setUpdateBy(userName);
-            updateBatch.setUpdateTime(LocalDateTime.now());
-            updateBatch.setRemark(batch.getRemark()+"出库扣减库存；");
-            updateBatch.setId(batch.getId());
-            goodsStockBatchService.updateById(updateBatch);
+            oGoodsInventoryBatchService.deductBatchStock(batch.getId(), request.getOutQty().intValue());
 
             // 2扣减总库存
-            ErpWarehouseGoodsStock goodsInventory = goodsStockService.getById(batch.getInventoryId());
-            if(goodsInventory!=null){
-                ErpWarehouseGoodsStock updateInventory = new ErpWarehouseGoodsStock();
-                updateInventory.setId(goodsInventory.getId());
-                updateInventory.setTotalNum(goodsInventory.getTotalNum() - request.getOutQty());
-                updateInventory.setUsableNum(goodsInventory.getUsableNum() - request.getOutQty());
-
-                updateInventory.setUpdateBy(userName);
-                updateInventory.setUpdateTime(LocalDateTime.now());
-                goodsStockService.updateById(updateInventory);
+            if(batch.getInventoryId()!=null){
+                oGoodsInventoryService.deductStock(batch.getInventoryId(), request.getOutQty().intValue());
             }
 
             // 记录发货备货批次信息(出库类型：1 且 存在sourceOrderItemId)
@@ -209,27 +192,25 @@ public class ErpStockOutServiceImpl extends ServiceImpl<ErpStockOutMapper, ErpSt
                     batchRecord.setOrderId(orderStockingItem.getOOrderId().toString());
                     batchRecord.setOrderItemId(orderStockingItem.getOOrderItemId().toString());
 
-                    // 谁发的货算谁的
                     batchRecord.setMerchantId(outItem.getMerchantId());
                     batchRecord.setShopId(outItem.getShopId());
 
-                    // 出库的批次
                     batchRecord.setBatchId(batch.getId());
                     batchRecord.setBatchNum(batch.getBatchNum());
                     batchRecord.setInventoryId(batch.getInventoryId());
                     batchRecord.setGoodsId(batch.getGoodsId());
-                    batchRecord.setGoodsNo(batch.getGoodsNo());
+                    batchRecord.setGoodsNo(batch.getSkuCode());
                     batchRecord.setQuantity(request.getOutQty());
-                    batchRecord.setUnitCost(batch.getPurPrice() != null ? new java.math.BigDecimal(batch.getPurPrice()) : null);
-                    batchRecord.setTotalCost(batch.getPurPrice() != null ? new java.math.BigDecimal(batch.getPurPrice()).multiply(new java.math.BigDecimal(request.getOutQty())) : null);
+                    batchRecord.setUnitCost(batch.getPurPrice());
+                    batchRecord.setTotalCost(batch.getPurPrice() != null ? batch.getPurPrice().multiply(java.math.BigDecimal.valueOf(request.getOutQty())) : null);
                     batchRecord.setWarehouseId(batch.getWarehouseId());
                     batchRecord.setInventoryMode(batch.getInventoryMode());
                     batchRecord.setBarcode(batch.getBarcode());
-                    batchRecord.setActualGoldWeight(batch.getActualGoldWeight() != null ? new java.math.BigDecimal(batch.getActualGoldWeight()) : null);
-                    batchRecord.setActualSilverWeight(batch.getActualSilverWeight() != null ? new java.math.BigDecimal(batch.getActualSilverWeight()) : null);
-                    batchRecord.setLaborCost(batch.getLaborCost() != null ? new java.math.BigDecimal(batch.getLaborCost()) : null);
+                    batchRecord.setActualGoldWeight(batch.getActualGoldWeight());
+                    batchRecord.setActualSilverWeight(batch.getActualSilverWeight());
+                    batchRecord.setLaborCost(batch.getLaborCost());
                     batchRecord.setCertificateNo(batch.getCertificateNo());
-                    batchRecord.setPurPrice(batch.getPurPrice() != null ? new java.math.BigDecimal(batch.getPurPrice()) : null);
+                    batchRecord.setPurPrice(batch.getPurPrice());
                     batchRecord.setCreateTime(LocalDateTime.now());
                     batchRecord.setCreateBy(userName);
                     orderStockingItemBatchService.save(batchRecord);
@@ -238,20 +219,19 @@ public class ErpStockOutServiceImpl extends ServiceImpl<ErpStockOutMapper, ErpSt
         }else{
             /***没有指定库存批次***减库存****/
             // 判断总库存
-            List<ErpWarehouseGoodsStock> inventoryList = goodsStockService.list(
-                    new LambdaQueryWrapper<ErpWarehouseGoodsStock>()
-                            .eq(ErpWarehouseGoodsStock::getGoodsId, outItem.getSkuId())
-                            .eq(ErpWarehouseGoodsStock::getWarehouseId, outItem.getWarehouseId()));
+            List<OGoodsInventory> inventoryList = oGoodsInventoryService.list(
+                    new LambdaQueryWrapper<OGoodsInventory>()
+                            .eq(OGoodsInventory::getSkuId, outItem.getSkuId())
+                            .eq(OGoodsInventory::getWarehouseId, outItem.getWarehouseId()));
 
             if(inventoryList.isEmpty()) return ResultVo.error("没有找到库存数据");
-            else if (inventoryList.get(0).getUsableNum().intValue()<request.getOutQty().intValue()) {
+            else if (inventoryList.get(0).getAvailableQuantity().intValue()<request.getOutQty().intValue()) {
                 return ResultVo.error("库存不足");
             }
             // 查询出所有的批次
-            List<ErpWarehouseGoodsStockBatch> batchList = goodsStockBatchService.list(
-                    new LambdaQueryWrapper<ErpWarehouseGoodsStockBatch>()
-                            .eq(ErpWarehouseGoodsStockBatch::getGoodsId, outItem.getSkuId())
-                            .eq(ErpWarehouseGoodsStockBatch::getInventoryId, inventoryList.get(0).getId()));
+            List<OGoodsInventoryBatch> batchList = oGoodsInventoryBatchService.list(
+                    new LambdaQueryWrapper<OGoodsInventoryBatch>()
+                            .eq(OGoodsInventoryBatch::getInventoryId, inventoryList.get(0).getId()));
             if(batchList.isEmpty()) return ResultVo.error("库存批次数据错误");
 
             // 按次序减少批次库存（先进先出）
@@ -262,22 +242,16 @@ public class ErpStockOutServiceImpl extends ServiceImpl<ErpStockOutMapper, ErpSt
                 int batchQty = batch.getCurrentQty();
                 int deductQuantity = Math.min(batchQty, shengyu);
                 if(batchQty>shengyu){
-                    ErpWarehouseGoodsStockBatch updateBatch = new ErpWarehouseGoodsStockBatch();
+                    OGoodsInventoryBatch updateBatch = new OGoodsInventoryBatch();
                     updateBatch.setCurrentQty(batchQty - shengyu);
-                    updateBatch.setUpdateBy(userName);
-                    updateBatch.setUpdateTime(LocalDateTime.now());
-                    updateBatch.setRemark((batch.getRemark()==null?"":batch.getRemark())+"出库扣减库存；");
                     updateBatch.setId(batch.getId());
-                    goodsStockBatchService.updateById(updateBatch);
+                    oGoodsInventoryBatchService.updateById(updateBatch);
                     shengyu=0;
                 }else{
-                    ErpWarehouseGoodsStockBatch updateBatch = new ErpWarehouseGoodsStockBatch();
+                    OGoodsInventoryBatch updateBatch = new OGoodsInventoryBatch();
                     updateBatch.setCurrentQty(0);
-                    updateBatch.setUpdateBy(userName);
-                    updateBatch.setUpdateTime(LocalDateTime.now());
-                    updateBatch.setRemark((batch.getRemark()==null?"":batch.getRemark())+"出库扣减库存；");
                     updateBatch.setId(batch.getId());
-                    goodsStockBatchService.updateById(updateBatch);
+                    oGoodsInventoryBatchService.updateById(updateBatch);
                     deductQuantity = batchQty;
                     shengyu=shengyu-batchQty;
                 }
@@ -293,26 +267,24 @@ public class ErpStockOutServiceImpl extends ServiceImpl<ErpStockOutMapper, ErpSt
                         batchRecord.setOrderId(orderStockingItem.getOOrderId().toString());
                         batchRecord.setOrderItemId(orderStockingItem.getOOrderItemId().toString());
 
-                        // 谁发的货算谁的
                         batchRecord.setMerchantId(outItem.getMerchantId());
                         batchRecord.setShopId(outItem.getShopId());
-                        // 出库的批次
                         batchRecord.setBatchId(batch.getId());
                         batchRecord.setBatchNum(batch.getBatchNum());
                         batchRecord.setInventoryId(batch.getInventoryId());
                         batchRecord.setGoodsId(batch.getGoodsId());
-                        batchRecord.setGoodsNo(batch.getGoodsNo());
+                        batchRecord.setGoodsNo(batch.getSkuCode());
                         batchRecord.setQuantity(deductQuantity);
-                        batchRecord.setUnitCost(batch.getPurPrice() != null ? new java.math.BigDecimal(batch.getPurPrice()) : null);
-                        batchRecord.setTotalCost(batch.getPurPrice() != null ? new java.math.BigDecimal(batch.getPurPrice()).multiply(new java.math.BigDecimal(deductQuantity)) : null);
+                        batchRecord.setUnitCost(batch.getPurPrice());
+                        batchRecord.setTotalCost(batch.getPurPrice() != null ? batch.getPurPrice().multiply(java.math.BigDecimal.valueOf(deductQuantity)) : null);
                         batchRecord.setWarehouseId(batch.getWarehouseId());
                         batchRecord.setInventoryMode(batch.getInventoryMode());
                         batchRecord.setBarcode(batch.getBarcode());
-                        batchRecord.setActualGoldWeight(batch.getActualGoldWeight() != null ? new java.math.BigDecimal(batch.getActualGoldWeight()) : null);
-                        batchRecord.setActualSilverWeight(batch.getActualSilverWeight() != null ? new java.math.BigDecimal(batch.getActualSilverWeight()) : null);
-                        batchRecord.setLaborCost(batch.getLaborCost() != null ? new java.math.BigDecimal(batch.getLaborCost()) : null);
+                        batchRecord.setActualGoldWeight(batch.getActualGoldWeight());
+                        batchRecord.setActualSilverWeight(batch.getActualSilverWeight());
+                        batchRecord.setLaborCost(batch.getLaborCost());
                         batchRecord.setCertificateNo(batch.getCertificateNo());
-                        batchRecord.setPurPrice(batch.getPurPrice() != null ? new java.math.BigDecimal(batch.getPurPrice()) : null);
+                        batchRecord.setPurPrice(batch.getPurPrice());
                         batchRecord.setCreateTime(LocalDateTime.now());
                         batchRecord.setCreateBy(userName);
                         orderStockingItemBatchService.save(batchRecord);
@@ -321,15 +293,7 @@ public class ErpStockOutServiceImpl extends ServiceImpl<ErpStockOutMapper, ErpSt
                 }
             }
             // 减少总库存
-            // 2扣减总库存
-
-            ErpWarehouseGoodsStock updateInventory = new ErpWarehouseGoodsStock();
-            updateInventory.setId(inventoryList.get(0).getId());
-            updateInventory.setTotalNum(inventoryList.get(0).getTotalNum() - request.getOutQty());
-            updateInventory.setUsableNum(inventoryList.get(0).getUsableNum() - request.getOutQty());
-            updateInventory.setUpdateBy(userName);
-            updateInventory.setUpdateTime(LocalDateTime.now());
-            goodsStockService.updateById(updateInventory);
+            oGoodsInventoryService.deductStock(inventoryList.get(0).getId(), request.getOutQty().intValue());
         }
 
 

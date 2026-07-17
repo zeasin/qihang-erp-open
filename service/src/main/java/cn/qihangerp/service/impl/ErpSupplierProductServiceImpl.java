@@ -34,7 +34,6 @@ public class ErpSupplierProductServiceImpl extends ServiceImpl<ErpSupplierProduc
 
     private final ErpSupplierProductItemMapper itemMapper;
     private final ErpWarehouseMapper warehouseMapper;
-    private final ErpWarehouseGoodsMapper warehouseGoodsMapper;
     private final ErpSupplierService supplierService;
     private final OGoodsMapper goodsMapper;
     private final OGoodsSkuMapper goodsSkuMapper;
@@ -173,25 +172,7 @@ public class ErpSupplierProductServiceImpl extends ServiceImpl<ErpSupplierProduc
                 item.setCreateBy(username);
                 itemMapper.insert(item);
                 
-                // 创建仓库商品记录
-                ErpWarehouseGoods warehouseGoods = new ErpWarehouseGoods();
-                warehouseGoods.setWarehouseType(EnumWarehouseType.SUPPLIER.getType());
-                warehouseGoods.setWarehouseId(warehouseId);
-                warehouseGoods.setMerchantId(bo.getSupplierId());
-                warehouseGoods.setGoodsName(item.getProductName());
-                warehouseGoods.setBarCode(item.getBarCode());
-                warehouseGoods.setStandard(item.getStandard());
-                warehouseGoods.setBrandNo(item.getBrandNo());
-                warehouseGoods.setBrandName(item.getBrandName());
-                warehouseGoods.setCreateBy(username);
-                warehouseGoods.setCreateTime(LocalDateTime.now());
-                warehouseGoodsMapper.insert(warehouseGoods);
-                
-                // 更新供应商商品SKU的仓库商品ID
-                ErpSupplierProductItem updateItem = new ErpSupplierProductItem();
-                updateItem.setId(item.getId());
-                updateItem.setWarehouseGoodsId(warehouseGoods.getId());
-                itemMapper.updateById(updateItem);
+
             }
         }
 
@@ -333,25 +314,7 @@ public class ErpSupplierProductServiceImpl extends ServiceImpl<ErpSupplierProduc
                     item.setCreateBy(username);
                     itemMapper.insert(item);
 
-                    // 创建仓库商品记录
-                    ErpWarehouseGoods warehouseGoods = new ErpWarehouseGoods();
-                    warehouseGoods.setWarehouseType("SUPPLIER");
-                    warehouseGoods.setWarehouseId(warehouseId);
-                    warehouseGoods.setMerchantId(product.getSupplierId());
-                    warehouseGoods.setGoodsName(item.getProductName());
-                    warehouseGoods.setBarCode(item.getBarCode());
-                    warehouseGoods.setStandard(item.getStandard());
-                    warehouseGoods.setBrandNo(item.getBrandNo());
-                    warehouseGoods.setBrandName(item.getBrandName());
-                    warehouseGoods.setCreateBy(username);
-                    warehouseGoods.setCreateTime(LocalDateTime.now());
-                    warehouseGoodsMapper.insert(warehouseGoods);
 
-                    // 更新供应商商品SKU的仓库商品ID
-                    ErpSupplierProductItem updateItem = new ErpSupplierProductItem();
-                    updateItem.setId(item.getId());
-                    updateItem.setWarehouseGoodsId(warehouseGoods.getId());
-                    itemMapper.updateById(updateItem);
                 }
             }
         }

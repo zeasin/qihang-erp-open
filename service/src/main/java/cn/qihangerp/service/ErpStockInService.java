@@ -35,12 +35,4 @@ public interface ErpStockInService extends IService<ErpStockIn> {
 
 
     ErpStockIn getDetailAndItemById(Long id);
-
-    /**
-     * 商户采购入库到云仓入库单确认并生成云仓仓库入库单
-     * @param stockInId 商户入库单ID（erp_stock_in）
-     * @param warehouseId 云仓仓库ID（erp_warehouse）
-     * @return
-     */
-    ResultVo<Long> merchantStockInConfirmAndCreateCloudWarehouseStockIn(Long stockInId,Long warehouseId);
 }

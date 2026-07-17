@@ -1,8 +1,6 @@
 package cn.qihangerp.service.impl;
 
 import cn.qihangerp.common.ResultVo;
-import cn.qihangerp.model.entity.ErpWarehouseGoodsStock;
-import cn.qihangerp.mapper.ErpWarehouseGoodsStockMapper;
 import cn.qihangerp.mapper.OGoodsSkuMapper;
 import cn.qihangerp.service.OGoodsSkuService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -25,7 +23,6 @@ import java.util.List;
 public class OGoodsSkuServiceImpl extends ServiceImpl<OGoodsSkuMapper, OGoodsSku>
     implements OGoodsSkuService {
     private final OGoodsSkuMapper skuMapper;
-    private final ErpWarehouseGoodsStockMapper goodsStockMapper;
 
     @Override
     public List<OGoodsSku> searchGoodsSpec(String keyword) {
@@ -96,10 +93,6 @@ public class OGoodsSkuServiceImpl extends ServiceImpl<OGoodsSkuMapper, OGoodsSku
     @Transactional(rollbackFor = Exception.class)
     @Override
     public ResultVo deleteSkuById(Long skuId) {
-        List<ErpWarehouseGoodsStock> oGoodsInventories = goodsStockMapper.selectList(new LambdaQueryWrapper<ErpWarehouseGoodsStock>().eq(ErpWarehouseGoodsStock::getGoodsId, skuId));
-        if(!oGoodsInventories.isEmpty()) {
-            return ResultVo.error("存在库存，不允许删除！");
-        }
         skuMapper.deleteById(skuId);
         return ResultVo.success();
     }

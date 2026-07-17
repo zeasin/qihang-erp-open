@@ -35,7 +35,6 @@ public class OOrderStockingItemServiceImpl extends ServiceImpl<OOrderStockingIte
     private final ErpStockOutItemMapper stockOutItemMapper;
     private final ErpStockOutMapper stockOutMapper;
     private final ErpWarehouseMapper warehouseMapper;
-    private final ErpWarehouseGoodsMapper warehouseGoodsMapper;
 
     /**
      * 查询供应商备货商品清单
@@ -121,13 +120,6 @@ public class OOrderStockingItemServiceImpl extends ServiceImpl<OOrderStockingIte
             else if (oOrderStockingItem.getStockingStatus().intValue()!=0) {
                 return ResultVo.error("存在错误的数据，备货单已经在备货中了:"+id);
             }
-            // 查询仓库商品id
-            List<ErpWarehouseGoods> erpWarehouseGoods = warehouseGoodsMapper.selectList(
-                    new LambdaQueryWrapper<ErpWarehouseGoods>()
-                            .eq(ErpWarehouseGoods::getWarehouseId, warehouse.getId())
-                            .eq(ErpWarehouseGoods::getErpGoodsSkuId, oOrderStockingItem.getGoodsSkuId()));
-            if (erpWarehouseGoods == null || erpWarehouseGoods.size() == 0) return ResultVo.error("SkuId:"+oOrderStockingItem.getGoodsSkuId()+"在仓库商品中未找到");
-
             // 组合出库单item数据
             ErpStockOutItem stockOutItem = new ErpStockOutItem();
             stockOutItem.setType(1);//出库类型1订单拣货出库2采购退货出库3盘点出库4报损出库
@@ -142,9 +134,8 @@ public class OOrderStockingItemServiceImpl extends ServiceImpl<OOrderStockingIte
             stockOutItem.setWarehouseId(bo.getWarehouseId());
             stockOutItem.setPositionId(0L);
 
-            // 要使用仓库商品id
-            stockOutItem.setGoodsId(erpWarehouseGoods.get(0).getId());
-            stockOutItem.setSkuId(erpWarehouseGoods.get(0).getId());
+            stockOutItem.setGoodsId(oOrderStockingItem.getGoodsSkuId());
+            stockOutItem.setSkuId(oOrderStockingItem.getGoodsSkuId());
 
             stockOutItem.setGoodsNum(oOrderStockingItem.getGoodsNum());
             stockOutItem.setGoodsName(oOrderStockingItem.getGoodsName());
@@ -263,13 +254,6 @@ public class OOrderStockingItemServiceImpl extends ServiceImpl<OOrderStockingIte
                 return ResultVo.error("存在错误的数据，备货单已经在备货中了:"+oOrderStockingItem.getId());
             }
 
-            // 查询仓库对应的商品
-            List<ErpWarehouseGoods> erpWarehouseGoods = warehouseGoodsMapper.selectList(
-                    new LambdaQueryWrapper<ErpWarehouseGoods>()
-                            .eq(ErpWarehouseGoods::getWarehouseId, warehouse.getId())
-                            .eq(ErpWarehouseGoods::getErpGoodsSkuId, oOrderStockingItem.getGoodsSkuId()));
-            if (erpWarehouseGoods == null || erpWarehouseGoods.size() == 0) return ResultVo.error("SkuId:"+oOrderStockingItem.getGoodsSkuId()+"在仓库商品中未找到");
-
             // 组合出库单item数据
             ErpStockOutItem stockOutItem = new ErpStockOutItem();
             stockOutItem.setType(1);//出库类型1订单拣货出库2采购退货出库3盘点出库4报损出库
@@ -285,9 +269,8 @@ public class OOrderStockingItemServiceImpl extends ServiceImpl<OOrderStockingIte
             stockOutItem.setWarehouseId(bo.getWarehouseId());
             stockOutItem.setPositionId(0L);
 
-            //这里需要替换成仓库商品ID
-            stockOutItem.setGoodsId(erpWarehouseGoods.get(0).getId());
-            stockOutItem.setSkuId(erpWarehouseGoods.get(0).getId());
+            stockOutItem.setGoodsId(oOrderStockingItem.getGoodsSkuId());
+            stockOutItem.setSkuId(oOrderStockingItem.getGoodsSkuId());
 
             stockOutItem.setGoodsNum(oOrderStockingItem.getGoodsNum());
             stockOutItem.setGoodsName(oOrderStockingItem.getGoodsName());

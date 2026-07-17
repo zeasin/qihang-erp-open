@@ -48,8 +48,8 @@ public class OOrderShipWaybillServiceImpl extends ServiceImpl<OOrderShipWaybillM
     private final ErpSalesOrderItemMapper erpSalesOrderItemMapper;
     private final ShopOrderItemMapper shopOrderItemMapper;
     private final ShopOrderMapper shopOrderMapper;
-    private final ErpWarehouseStockOutMapper warehouseStockOutMapper;
-    private final ErpWarehouseStockOutItemMapper warehouseStockOutItemMapper;
+    private final ErpStockOutMapper stockOutMapper;
+    private final ErpStockOutItemMapper stockOutItemMapper;
 
     @Override
     public PageResult<OOrderShipWaybill> queryPageTodayList(Long merchantId, PageQuery pageQuery) {
@@ -853,7 +853,7 @@ public class OOrderShipWaybillServiceImpl extends ServiceImpl<OOrderShipWaybillM
         // 发货记录item
 //        List<OShipmentItem> shipmentItemList = new ArrayList<>();
         // 出库单item list
-        List<ErpWarehouseStockOutItem> stockOutItemList = new ArrayList<>();
+        List<ErpStockOutItem> stockOutItemList = new ArrayList<>();
 
         // 更新子表数据（分配给供应商的订单不允许再拆单或者合单）
         List<OOrderStockingItem> shipOrderItemList = orderStockingItemMapper.selectList(
@@ -887,7 +887,7 @@ public class OOrderShipWaybillServiceImpl extends ServiceImpl<OOrderShipWaybillM
 //                    shipmentItemList.add(shipmentItem);
 
                     // 加入仓库出库单item
-                    ErpWarehouseStockOutItem stockOutItem = new ErpWarehouseStockOutItem();
+                    ErpStockOutItem stockOutItem = new ErpStockOutItem();
                     stockOutItem.setType(EnumStockOutType.ORDER_STOCK_OUT.getIndex());
                     stockOutItem.setOriginalQuantity(item.getShipQuantity());
                     stockOutItem.setOutQuantity(0);
@@ -898,7 +898,6 @@ public class OOrderShipWaybillServiceImpl extends ServiceImpl<OOrderShipWaybillM
                     stockOutItem.setGoodsImage(item.getGoodsImg());
                     stockOutItem.setSkuName(item.getSkuName());
                     stockOutItem.setWarehouseId(item.getWarehouseId());
-                    stockOutItem.setVendorId(item.getWarehouseId());
                     stockOutItem.setMerchantId(item.getMerchantId());
                     stockOutItemList.add(stockOutItem);
 
@@ -1039,7 +1038,7 @@ public class OOrderShipWaybillServiceImpl extends ServiceImpl<OOrderShipWaybillM
 
         // 添加仓库出库单
         if(!stockOutItemList.isEmpty()) {
-            ErpWarehouseStockOut stockOut = new ErpWarehouseStockOut();
+            ErpStockOut stockOut = new ErpStockOut();
             stockOut.setOutNum("DDCK-" + DateUtils.parseDateToStr("yyyyMMdd", LocalDateTime.now()) + "-" + System.currentTimeMillis() / 1000);
             stockOut.setSourceId(shipOrder.getId());
             stockOut.setSourceNum(shipOrder.getOrderNum());
@@ -1052,14 +1051,14 @@ public class OOrderShipWaybillServiceImpl extends ServiceImpl<OOrderShipWaybillM
             stockOut.setPrintStatus(0);
             stockOut.setCreateBy("订单发货生成出库单");
             stockOut.setCreateTime(LocalDateTime.now());
-            stockOut.setVendorId(shipOrder.getWarehouseId());
+            stockOut.setWarehouseId(shipOrder.getWarehouseId());
             stockOut.setMerchantId(shipOrder.getMerchantId());
-            warehouseStockOutMapper.insert(stockOut);
+            stockOutMapper.insert(stockOut);
             for (var s : stockOutItemList) {
                 s.setEntryId(stockOut.getId());
                 s.setCreateTime(LocalDateTime.now());
                 s.setCreateBy("订单发货生成出库单");
-                warehouseStockOutItemMapper.insert(s);
+                stockOutItemMapper.insert(s);
             }
         }
         // 添加发货记录

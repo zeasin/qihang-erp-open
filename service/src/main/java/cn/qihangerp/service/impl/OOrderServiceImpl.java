@@ -60,7 +60,7 @@ public class OOrderServiceImpl extends ServiceImpl<OOrderMapper, OOrder>
     private final ErpOrderMessageService erpOrderMessageService;
     private final ErpSalesOrderMapper erpSalesOrderMapper;
     private final ErpSalesOrderItemMapper erpSalesOrderItemMapper;
-    private final ErpWarehouseGoodsMapper warehouseGoodsMapper;
+
     private final ShopGoodsSkuService shopGoodsSkuMappingService;
     private final ErpWarehouseShopMapper erpWarehouseShopMapper;
     private final OShopMapper oShopMapper;
@@ -1184,16 +1184,6 @@ public class OOrderServiceImpl extends ServiceImpl<OOrderMapper, OOrder>
                         goodsSkuId = shopGoodsSkuMapping.getErpGoodsSkuId();
                         goodsId = shopGoodsSkuMapping.getErpGoodsId();
                     }
-                }
-                // 查询 仓库商品数据
-                List<ErpWarehouseGoods> erpWarehouseGoods = warehouseGoodsMapper.selectList(new LambdaQueryWrapper<ErpWarehouseGoods>()
-                        .eq(ErpWarehouseGoods::getErpGoodsSkuId, goodsSkuId)
-                        .eq(ErpWarehouseGoods::getWarehouseId, warehouse.getId())
-                );
-                if (erpWarehouseGoods.isEmpty()) {
-                    TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                    log.error("仓库没有找到该商品SKU:{}", goodsSkuId);
-                    return ResultVo.error("仓库没有找到该商品SKU:" + goodsSkuId);
                 }
                 listItem.setGoodsId(goodsId);
                 listItem.setGoodsSkuId(goodsSkuId);

@@ -30,7 +30,6 @@ public class ShopGoodsController extends BaseController {
     private final ShopGoodsSkuService skuService;
     private final OGoodsSkuService oGoodsSkuService;
     private final OShopService shopService;
-    private final ErpWarehouseGoodsStockService goodsStockService;
     private final ShopPullApiService shopPullApiService;
 
     /**

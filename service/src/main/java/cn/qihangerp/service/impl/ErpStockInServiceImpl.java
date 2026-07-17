@@ -1,10 +1,8 @@
 package cn.qihangerp.service.impl;
 
 import cn.qihangerp.common.*;
-import cn.qihangerp.enums.EnumWarehouseType;
 import cn.qihangerp.model.entity.*;
 import cn.qihangerp.model.request.*;
-import cn.qihangerp.mapper.ErpWarehousePositionMapper;
 import cn.qihangerp.service.*;
 import cn.qihangerp.utils.DateUtils;
 import cn.qihangerp.mapper.ErpStockInMapper;
@@ -36,13 +34,9 @@ public class ErpStockInServiceImpl extends ServiceImpl<ErpStockInMapper, ErpStoc
     private final ErpStockInItemService inItemService;
     private final OGoodsSkuService skuService;
     private final OGoodsService goodsService;
-    private final ErpWarehousePositionMapper warehousePositionMapper;
-    private final ErpWarehouseGoodsService warehouseGoodsService;
     private final ErpWarehouseService warehouseService;
-    private final ErpWarehouseStockInService vendorStockInService;
-    private final ErpWarehouseStockInItemService vendorStockInItemService;
-    private final ErpWarehouseGoodsStockService warehouseGoodsStockService;
-    private final ErpWarehouseGoodsStockBatchService warehouseGoodsStockBatchService;
+    private final OGoodsInventoryService oGoodsInventoryService;
+    private final OGoodsInventoryBatchService oGoodsInventoryBatchService;
 
 
     @Override
@@ -197,95 +191,55 @@ public class ErpStockInServiceImpl extends ServiceImpl<ErpStockInMapper, ErpStoc
                 return ResultVo.error(ResultVoEnum.DataError, "数据错误！没有找到入库单明细");
             }
             OGoodsSku oGoodsSku = skuService.getById(stockInItem.getSkuId());
-            // 添加库存操作表
 
+            // 使用主系统库存表 OGoodsInventory
             Long goodsInventoryId = null;
-            Long warehouseGoodsId = null;
-            // 增加商品库存表
-            List<ErpWarehouseGoodsStock> inventoryList = warehouseGoodsStockService.list(
-                    new LambdaQueryWrapper<ErpWarehouseGoodsStock>()
-                            .eq(ErpWarehouseGoodsStock::getGoodsId, stockInItem.getSkuId()));
-            if (inventoryList.isEmpty()) {
-                // 新增
-                ErpWarehouseGoodsStock inventory = new ErpWarehouseGoodsStock();
-                inventory.setWarehouseId(request.getWarehouseId());
-                inventory.setMerchantId(stockInItem.getMerchantId());
-                inventory.setGoodsId(Long.parseLong(stockInItem.getGoodsId()));
-                inventory.setGoodsNo(oGoodsSku.getSkuCode());
-                inventory.setErpGoodsNo(oGoodsSku.getSkuCode());
-                inventory.setErpGoodsSign(oGoodsSku.getGoodsNum());
-
-                inventory.setErpGoodsSkuId(Long.parseLong(stockInItem.getSkuId()));
-
-                inventory.setGoodsName(oGoodsSku.getGoodsName());
-//                inventory.setGoodsImg(oGoodsSku.getColorImage());
-                inventory.setGoodsName(oGoodsSku.getSkuName());
-                inventory.setUsableNum(item.getIntoQuantity());
-//                inventory.setIsDelete(0);
-                inventory.setCreateBy(userName);
-                inventory.setCreateTime(LocalDateTime.now());
-                warehouseGoodsStockService.save(inventory);
-                goodsInventoryId = inventory.getId();
-
-                // 增加仓库商品表数据 erp_warehouse_goods
-                List<ErpWarehouseGoods> warehouseGoodsList = warehouseGoodsService.list(
-                        new LambdaQueryWrapper<ErpWarehouseGoods>()
-                                .eq(ErpWarehouseGoods::getWarehouseId, request.getWarehouseId())
-                        .eq(ErpWarehouseGoods::getErpGoodsSkuId, inventory.getErpGoodsSkuId()));
-
-                if(warehouseGoodsList.isEmpty()) {
-                    // 新增
-                    ErpWarehouseGoods warehouseGoods = new ErpWarehouseGoods();
-                    warehouseGoods.setGoodsNo(oGoodsSku.getSkuCode());
-                    warehouseGoods.setErpGoodsNo(oGoodsSku.getSkuCode());
-                    warehouseGoods.setErpGoodsSign(oGoodsSku.getGoodsNum());
-                    warehouseGoods.setGoodsName(oGoodsSku.getGoodsName());
-                    warehouseGoods.setStandard(oGoodsSku.getSkuName());
-                    warehouseGoods.setImageUrl(oGoodsSku.getColorImage());
-                    warehouseGoods.setColor(oGoodsSku.getColorValue());
-                    warehouseGoods.setSize(oGoodsSku.getSizeValue());
-                    warehouseGoods.setErpGoodsId(Long.parseLong(oGoodsSku.getGoodsId()));
-                    warehouseGoods.setErpGoodsSkuId(Long.parseLong(oGoodsSku.getId()));
-                    warehouseGoods.setMerchantId(inventory.getMerchantId());
-                    warehouseGoods.setWarehouseId(inventory.getWarehouseId());
-                    warehouseGoods.setWarehouseType("LOCAL");
-                    warehouseGoods.setCreateTime(LocalDateTime.now());
-
-                    warehouseGoodsService.save(warehouseGoods);
-                    warehouseGoodsId = warehouseGoods.getId();
-                }else {
-                    warehouseGoodsId =  warehouseGoodsList.get(0).getId();
-                }
+            List<OGoodsInventory> invList = oGoodsInventoryService.list(
+                    new LambdaQueryWrapper<OGoodsInventory>()
+                            .eq(OGoodsInventory::getWarehouseId, request.getWarehouseId())
+                            .eq(OGoodsInventory::getSkuId, Long.parseLong(stockInItem.getSkuId())));
+            if (invList.isEmpty()) {
+                OGoodsInventory inv = new OGoodsInventory();
+                inv.setWarehouseId(request.getWarehouseId());
+                inv.setMerchantId(stockInItem.getMerchantId());
+                inv.setGoodsId(Long.parseLong(stockInItem.getGoodsId()));
+                inv.setSkuId(Long.parseLong(stockInItem.getSkuId()));
+                inv.setSkuCode(stockInItem.getSkuCode());
+                inv.setGoodsNum(oGoodsSku.getGoodsNum());
+                inv.setGoodsName(oGoodsSku.getGoodsName());
+                inv.setSkuName(oGoodsSku.getSkuName());
+                inv.setGoodsImg(oGoodsSku.getColorImage());
+                inv.setQuantity(item.getIntoQuantity());
+                inv.setLockedQuantity(0);
+                inv.setAvailableQuantity(item.getIntoQuantity());
+                inv.setStockStatus(1);
+                inv.setIsDelete(0);
+                inv.setCreateBy(userName);
+                inv.setCreateTime(LocalDateTime.now());
+                oGoodsInventoryService.save(inv);
+                goodsInventoryId = inv.getId();
             } else {
-                //修改
-                ErpWarehouseGoodsStock update = new ErpWarehouseGoodsStock();
-                update.setId(inventoryList.get(0).getId());
-                update.setUpdateBy(userName);
-                update.setUpdateTime(LocalDateTime.now());
-                update.setUsableNum(inventoryList.get(0).getUsableNum() + item.getIntoQuantity());
-                warehouseGoodsStockService.updateById(update);
-                goodsInventoryId = inventoryList.get(0).getId();
+                oGoodsInventoryService.addStock(invList.get(0).getId(), item.getIntoQuantity());
+                goodsInventoryId = invList.get(0).getId();
             }
 
             // 增加商品库存批次表
-            ErpWarehouseGoodsStockBatch inventoryBatch = new ErpWarehouseGoodsStockBatch();
-            inventoryBatch.setInventoryId(goodsInventoryId);
-            inventoryBatch.setMerchantId(erpStockIn.getMerchantId());
-            inventoryBatch.setBatchNum(DateUtils.parseDateToStr("yyyyMMddHHmmss", LocalDateTime.now()));
-            inventoryBatch.setOriginQty(item.getIntoQuantity());
-            inventoryBatch.setCurrentQty(item.getIntoQuantity());
-            inventoryBatch.setPurPrice(stockInItem.getPurPrice());
-            inventoryBatch.setPurId(0L);
-            inventoryBatch.setPurItemId(0L);
-//            inventoryBatch.setSkuId(stockInItem.getSkuId());
-//            inventoryBatch.setSkuCode(stockInItem.getSkuCode());
-            inventoryBatch.setGoodsId(warehouseGoodsId);
-            inventoryBatch.setWarehouseId(request.getWarehouseId());
-            inventoryBatch.setPositionId(item.getPositionId()==null?0:item.getPositionId());
-            inventoryBatch.setPositionNum(item.getPositionNum());
-            inventoryBatch.setCreateTime(LocalDateTime.now());
-            inventoryBatch.setCreateBy(userName);
-            warehouseGoodsStockBatchService.save(inventoryBatch);
+            OGoodsInventoryBatch batch = new OGoodsInventoryBatch();
+            batch.setInventoryId(goodsInventoryId);
+            batch.setBatchNum(DateUtils.parseDateToStr("yyyyMMddHHmmss", LocalDateTime.now()));
+            batch.setOriginQty(item.getIntoQuantity());
+            batch.setCurrentQty(item.getIntoQuantity());
+            batch.setPurPrice(stockInItem.getPurPrice() != null ? java.math.BigDecimal.valueOf(stockInItem.getPurPrice()) : null);
+            batch.setMerchantId(erpStockIn.getMerchantId());
+            batch.setSkuId(Long.parseLong(stockInItem.getSkuId()));
+            batch.setSkuCode(stockInItem.getSkuCode());
+            batch.setGoodsId(Long.parseLong(stockInItem.getGoodsId()));
+            batch.setWarehouseId(request.getWarehouseId());
+            batch.setPositionId(item.getPositionId() == null ? 0L : item.getPositionId());
+            batch.setPositionNum(item.getPositionNum() != null ? item.getPositionNum() : "");
+            batch.setCreateTime(LocalDateTime.now());
+            batch.setCreateBy(userName);
+            oGoodsInventoryBatchService.save(batch);
 
             // 回写状态
             ErpStockInItem update = new ErpStockInItem();
@@ -340,118 +294,63 @@ public class ErpStockInServiceImpl extends ServiceImpl<ErpStockInMapper, ErpStoc
         if (stockInItem == null) {
             return ResultVo.error(ResultVoEnum.DataError, "数据错误！没有找到入库单明细");
         }
-        String positionNum="";
-        if(request.getPositionId()!=null&&request.getPositionId()>0) {
-            ErpWarehousePosition erpWarehousePosition = warehousePositionMapper.selectById(request.getPositionId());
-            if(erpWarehousePosition!=null) {
-                positionNum = erpWarehousePosition.getNumber();
-            }else return ResultVo.error("仓库仓位不存在");
-        }
-
         // 开始入库
         OGoodsSku oGoodsSku = skuService.getById(stockInItem.getSkuId());
         if (oGoodsSku == null) return ResultVo.error("数据错误！没有找到入库商品SKU信息");
-        
-        // 增加仓库商品表数据 erp_warehouse_goods
-        List<ErpWarehouseGoods> warehouseGoodsList = warehouseGoodsService.list(new LambdaQueryWrapper<ErpWarehouseGoods>()
-                .eq(ErpWarehouseGoods::getWarehouseId, request.getWarehouseId())
-                .eq(ErpWarehouseGoods::getErpGoodsSkuId, Long.parseLong(oGoodsSku.getId())));
-        Long warehouseGoodsId = null;
-        if (warehouseGoodsList.isEmpty()) {
-            // 新增
-            ErpWarehouseGoods warehouseGoods = new ErpWarehouseGoods();
-            warehouseGoods.setErpGoodsNo(oGoodsSku.getSkuCode());
-            warehouseGoods.setErpGoodsSign(oGoodsSku.getGoodsNum());
-            warehouseGoods.setGoodsName(oGoodsSku.getGoodsName());
-            warehouseGoods.setStandard(oGoodsSku.getSkuName());
-            warehouseGoods.setImageUrl(oGoodsSku.getColorImage());
-            warehouseGoods.setColor(oGoodsSku.getColorValue());
-            warehouseGoods.setSize(oGoodsSku.getSizeValue());
-            warehouseGoods.setErpGoodsId(Long.parseLong(oGoodsSku.getGoodsId()));
-            warehouseGoods.setErpGoodsSkuId(Long.parseLong(oGoodsSku.getId()));
-            warehouseGoods.setMerchantId(stockInItem.getMerchantId());
-            warehouseGoods.setShopId(stockInItem.getShopId());
-            warehouseGoods.setWarehouseId(request.getWarehouseId());
-            warehouseGoods.setWarehouseType("LOCAL");
-            warehouseGoods.setCreateTime(LocalDateTime.now());
-            warehouseGoodsService.save(warehouseGoods);
-            warehouseGoodsId = warehouseGoods.getId();
+
+        // 使用主系统库存表 OGoodsInventory
+        Long goodsInventoryId = null;
+        List<OGoodsInventory> invList = oGoodsInventoryService.list(
+                new LambdaQueryWrapper<OGoodsInventory>()
+                        .eq(OGoodsInventory::getWarehouseId, request.getWarehouseId())
+                        .eq(OGoodsInventory::getSkuId, Long.parseLong(stockInItem.getSkuId())));
+        if (invList.isEmpty()) {
+            OGoodsInventory inv = new OGoodsInventory();
+            inv.setWarehouseId(request.getWarehouseId());
+            inv.setMerchantId(stockInItem.getMerchantId());
+            inv.setShopId(stockInItem.getShopId());
+            inv.setGoodsId(Long.parseLong(stockInItem.getGoodsId()));
+            inv.setSkuId(Long.parseLong(stockInItem.getSkuId()));
+            inv.setSkuCode(stockInItem.getSkuCode());
+            inv.setGoodsNum(oGoodsSku.getGoodsNum());
+            inv.setGoodsName(oGoodsSku.getGoodsName());
+            inv.setSkuName(oGoodsSku.getSkuName());
+            inv.setGoodsImg(oGoodsSku.getColorImage());
+            inv.setQuantity(request.getIntoQuantity());
+            inv.setLockedQuantity(0);
+            inv.setAvailableQuantity(request.getIntoQuantity());
+            inv.setStockStatus(1);
+            inv.setIsDelete(0);
+            inv.setCreateBy(userName);
+            inv.setCreateTime(LocalDateTime.now());
+            oGoodsInventoryService.save(inv);
+            goodsInventoryId = inv.getId();
         } else {
-            warehouseGoodsId = warehouseGoodsList.get(0).getId();
+            oGoodsInventoryService.addStock(invList.get(0).getId(), request.getIntoQuantity());
+            goodsInventoryId = invList.get(0).getId();
         }
 
-        // 增加商品库存表 erp_warehouse_goods_stock
-        List<ErpWarehouseGoodsStock> warehouseGoodsStockList = warehouseGoodsStockService.list(new LambdaQueryWrapper<ErpWarehouseGoodsStock>()
-                .eq(ErpWarehouseGoodsStock::getWarehouseId, request.getWarehouseId())
-                .eq(ErpWarehouseGoodsStock::getGoodsId, warehouseGoodsId)
-                .eq(ErpWarehouseGoodsStock::getStockStatus, 1));
-        Long goodsStockId = null;
-        if (warehouseGoodsStockList.isEmpty()) {
-            // 新增
-            ErpWarehouse erpWarehouse = warehouseService.getById(request.getWarehouseId());
-            if (erpWarehouse == null) return ResultVo.error("仓库不存在");
-            
-            ErpWarehouseGoodsStock inventory = new ErpWarehouseGoodsStock();
-            inventory.setWarehouseId(request.getWarehouseId());
-            inventory.setWarehouseNo(erpWarehouse.getWarehouseNo());
-            inventory.setWarehouseName(erpWarehouse.getWarehouseName());
-            inventory.setWarehouseType(erpWarehouse.getWarehouseType());
-            inventory.setMerchantId(stockInItem.getMerchantId());
-            inventory.setShopId(stockInItem.getShopId());
-            inventory.setGoodsNo(oGoodsSku.getSkuCode());
-            inventory.setGoodsId(warehouseGoodsId);
-            inventory.setGoodsName(stockInItem.getGoodsName());
-            inventory.setErpGoodsNo(oGoodsSku.getSkuCode());
-            inventory.setErpGoodsSign(oGoodsSku.getGoodsNum());
-            inventory.setErpGoodsId(Long.parseLong(oGoodsSku.getGoodsId()));
-            inventory.setErpGoodsSkuId(Long.parseLong(oGoodsSku.getId()));
-            inventory.setSellerGoodsSign("");
-            inventory.setStockStatus(1); // 1-良品
-            inventory.setStockType(1); // 1-可销售
-            inventory.setTotalNum(request.getIntoQuantity());
-            inventory.setTotalNumValue(request.getIntoQuantity().doubleValue());
-            inventory.setUsableNum(request.getIntoQuantity());
-            inventory.setUsableNumValue(request.getIntoQuantity().doubleValue());
-            inventory.setCreateBy(userName);
-            inventory.setCreateTime(LocalDateTime.now());
-            warehouseGoodsStockService.save(inventory);
-            goodsStockId = inventory.getId();
-        } else {
-            // 修改
-            ErpWarehouseGoodsStock update = new ErpWarehouseGoodsStock();
-            update.setId(warehouseGoodsStockList.get(0).getId());
-            update.setUpdateBy(userName);
-            update.setUpdateTime(LocalDateTime.now());
-            update.setTotalNum(warehouseGoodsStockList.get(0).getTotalNum() + request.getIntoQuantity());
-            update.setTotalNumValue(update.getTotalNum().doubleValue());
-            update.setUsableNum(warehouseGoodsStockList.get(0).getUsableNum() + request.getIntoQuantity());
-            update.setUsableNumValue(update.getUsableNum().doubleValue());
-            warehouseGoodsStockService.updateById(update);
-            goodsStockId = warehouseGoodsStockList.get(0).getId();
-        }
-
-        // 增加商品库存批次表 erp_warehouse_goods_stock_batch
-        ErpWarehouseGoodsStockBatch inventoryBatch = new ErpWarehouseGoodsStockBatch();
-        inventoryBatch.setInventoryId(goodsStockId);
+        // 增加商品库存批次表 OGoodsInventoryBatch
+        OGoodsInventoryBatch inventoryBatch = new OGoodsInventoryBatch();
+        inventoryBatch.setInventoryId(goodsInventoryId);
         inventoryBatch.setBatchNum(DateUtils.parseDateToStr("yyyyMMddHHmmss", LocalDateTime.now()));
         inventoryBatch.setOriginQty(request.getIntoQuantity());
         inventoryBatch.setCurrentQty(request.getIntoQuantity());
-        inventoryBatch.setPurPrice(stockInItem.getPurPrice());
+        inventoryBatch.setPurPrice(stockInItem.getPurPrice() != null ? java.math.BigDecimal.valueOf(stockInItem.getPurPrice()) : null);
         inventoryBatch.setPurId(stockInItem.getSourceId());
         inventoryBatch.setPurItemId(stockInItem.getSourceItemId());
         inventoryBatch.setMerchantId(stockInItem.getMerchantId());
         inventoryBatch.setShopId(stockInItem.getShopId());
         inventoryBatch.setInventoryMode(stockInItem.getInventoryMode());
-
-        inventoryBatch.setGoodsNo(oGoodsSku.getSkuCode());
-        inventoryBatch.setGoodsId(warehouseGoodsId);
+        inventoryBatch.setSkuId(Long.parseLong(stockInItem.getSkuId()));
+        inventoryBatch.setSkuCode(stockInItem.getSkuCode());
+        inventoryBatch.setGoodsId(Long.parseLong(stockInItem.getGoodsId()));
         inventoryBatch.setWarehouseId(request.getWarehouseId());
-        inventoryBatch.setVendorId(request.getWarehouseId());
-        inventoryBatch.setPositionId(request.getPositionId() == null ? 0L : request.getPositionId());
-        inventoryBatch.setPositionNum(positionNum);
+        inventoryBatch.setPositionId(request.getPositionId() != null ? request.getPositionId() : 0L);
+        inventoryBatch.setPositionNum(request.getPositionId() != null ? String.valueOf(request.getPositionId()) : "");
         inventoryBatch.setCreateTime(LocalDateTime.now());
         inventoryBatch.setCreateBy(userName);
-        warehouseGoodsStockBatchService.save(inventoryBatch);
+        oGoodsInventoryBatchService.save(inventoryBatch);
 
         // 回写状态
         ErpStockInItem update = new ErpStockInItem();
@@ -461,19 +360,10 @@ public class ErpStockInServiceImpl extends ServiceImpl<ErpStockInMapper, ErpStoc
         update.setStatus(inQuantity.intValue() >= stockInItem.getQuantity().intValue() ? 2 : 1); // 状态（0待入库1部分入库2已入库）
         update.setWarehouseId(request.getWarehouseId());
         update.setPositionId(request.getPositionId());
-        String oldPosition = stockInItem.getPositionNum();
-        if(org.springframework.util.StringUtils.isEmpty(positionNum)){
-            positionNum = "空";
-        }
-        String newPosition = "";
-        if(org.springframework.util.StringUtils.isEmpty(oldPosition)){
-            oldPosition = "";
-            newPosition = positionNum + ":" + request.getIntoQuantity();
-        }else{
-            newPosition = oldPosition + "," + positionNum + ":" + request.getIntoQuantity();
-        }
-
-        update.setPositionNum(newPosition);
+        String posNum = request.getPositionId() != null ? String.valueOf(request.getPositionId()) : "空";
+        String oldPos = stockInItem.getPositionNum();
+        String newPos = (org.springframework.util.StringUtils.isEmpty(oldPos) ? "" : oldPos + ",") + posNum + ":" + request.getIntoQuantity();
+        update.setPositionNum(newPos);
         update.setUpdateBy(userName);
         update.setUpdateTime(LocalDateTime.now());
         inItemService.updateById(update);
@@ -533,167 +423,89 @@ public class ErpStockInServiceImpl extends ServiceImpl<ErpStockInMapper, ErpStoc
             if(stockInItem.getInventoryMode()==0) intoQty = item.getQuantity();
             else if(stockInItem.getInventoryMode()==1) intoQty = item.getBatchList().size();
             
-            // 增加仓库商品表数据 erp_warehouse_goods
-            List<ErpWarehouseGoods> warehouseGoodsList = warehouseGoodsService.list(new LambdaQueryWrapper<ErpWarehouseGoods>()
-                    .eq(ErpWarehouseGoods::getWarehouseId, erpStockIn.getWarehouseId())
-                    .eq(ErpWarehouseGoods::getErpGoodsSkuId, Long.parseLong(oGoodsSku.getId())));
-            Long warehouseGoodsId = null;
-            if (warehouseGoodsList.isEmpty()) {
-                // 新增
-                ErpWarehouseGoods warehouseGoods = new ErpWarehouseGoods();
-                warehouseGoods.setGoodsNo(oGoodsSku.getSkuCode());
-                warehouseGoods.setErpGoodsNo(oGoodsSku.getId());
-                warehouseGoods.setErpGoodsSign(oGoodsSku.getGoodsId());
-                warehouseGoods.setGoodsName(oGoodsSku.getGoodsName());
-                warehouseGoods.setStandard(oGoodsSku.getSkuName());
-                warehouseGoods.setImageUrl(oGoodsSku.getColorImage());
-                warehouseGoods.setColor(oGoodsSku.getColorValue());
-                warehouseGoods.setSize(oGoodsSku.getSizeValue());
-                warehouseGoods.setErpGoodsId(Long.parseLong(oGoodsSku.getGoodsId()));
-                warehouseGoods.setErpGoodsSkuId(Long.parseLong(oGoodsSku.getId()));
-                warehouseGoods.setMerchantId(stockInItem.getMerchantId());
-                warehouseGoods.setShopId(stockInItem.getShopId());
-                warehouseGoods.setWarehouseId(erpStockIn.getWarehouseId());
-                warehouseGoods.setWarehouseType("LOCAL");
-                warehouseGoods.setCreateTime(LocalDateTime.now());
-                warehouseGoodsService.save(warehouseGoods);
-                warehouseGoodsId = warehouseGoods.getId();
+            // 使用主系统库存表 OGoodsInventory
+            Long goodsInventoryId = null;
+            List<OGoodsInventory> invList = oGoodsInventoryService.list(
+                    new LambdaQueryWrapper<OGoodsInventory>()
+                            .eq(OGoodsInventory::getWarehouseId, erpStockIn.getWarehouseId())
+                            .eq(OGoodsInventory::getSkuId, Long.parseLong(stockInItem.getSkuId())));
+            if (invList.isEmpty()) {
+                OGoodsInventory inv = new OGoodsInventory();
+                inv.setWarehouseId(erpStockIn.getWarehouseId());
+                inv.setMerchantId(stockInItem.getMerchantId());
+                inv.setShopId(stockInItem.getShopId());
+                inv.setGoodsId(Long.parseLong(stockInItem.getGoodsId()));
+                inv.setSkuId(Long.parseLong(stockInItem.getSkuId()));
+                inv.setSkuCode(stockInItem.getSkuCode());
+                inv.setGoodsNum(oGoodsSku.getGoodsNum());
+                inv.setGoodsName(oGoodsSku.getGoodsName());
+                inv.setSkuName(oGoodsSku.getSkuName());
+                inv.setGoodsImg(oGoodsSku.getColorImage());
+                inv.setQuantity(intoQty);
+                inv.setLockedQuantity(0);
+                inv.setAvailableQuantity(intoQty);
+                inv.setStockStatus(1);
+                inv.setIsDelete(0);
+                inv.setCreateBy(userName);
+                inv.setCreateTime(LocalDateTime.now());
+                oGoodsInventoryService.save(inv);
+                goodsInventoryId = inv.getId();
             } else {
-                warehouseGoodsId = warehouseGoodsList.get(0).getId();
+                oGoodsInventoryService.addStock(invList.get(0).getId(), intoQty);
+                goodsInventoryId = invList.get(0).getId();
             }
 
-            // 增加商品库存表 erp_warehouse_goods_stock
-            List<ErpWarehouseGoodsStock> warehouseGoodsStockList = warehouseGoodsStockService.list(new LambdaQueryWrapper<ErpWarehouseGoodsStock>()
-                    .eq(ErpWarehouseGoodsStock::getWarehouseId, erpStockIn.getWarehouseId())
-                    .eq(ErpWarehouseGoodsStock::getGoodsId, warehouseGoodsId)
-                    .eq(ErpWarehouseGoodsStock::getStockStatus, 1));
-            Long goodsStockId = null;
-            if (warehouseGoodsStockList.isEmpty()) {
-                // 新增
-                ErpWarehouse erpWarehouse = warehouseService.getById(erpStockIn.getWarehouseId());
-                if (erpWarehouse == null) return ResultVo.error("仓库不存在");
-                
-                ErpWarehouseGoodsStock inventory = new ErpWarehouseGoodsStock();
-                inventory.setWarehouseId(erpStockIn.getWarehouseId());
-                inventory.setWarehouseNo(erpWarehouse.getWarehouseNo());
-                inventory.setWarehouseName(erpWarehouse.getWarehouseName());
-                inventory.setWarehouseType(erpWarehouse.getWarehouseType());
-                inventory.setMerchantId(stockInItem.getMerchantId());
-                inventory.setShopId(stockInItem.getShopId());
-                inventory.setGoodsNo(oGoodsSku.getSkuCode());
-                inventory.setGoodsId(warehouseGoodsId);
-                inventory.setGoodsName(stockInItem.getGoodsName());
-                inventory.setErpGoodsNo(oGoodsSku.getSkuCode());
-                inventory.setErpGoodsSign(oGoodsSku.getGoodsNum());
-                inventory.setErpGoodsId(Long.parseLong(oGoodsSku.getGoodsId()));
-                inventory.setErpGoodsSkuId(Long.parseLong(oGoodsSku.getId()));
-                inventory.setSellerGoodsSign("");
-                inventory.setStockStatus(1); // 1-良品
-                inventory.setStockType(1); // 1-可销售
-                inventory.setTotalNum(intoQty);
-                inventory.setTotalNumValue(intoQty.doubleValue());
-                inventory.setUsableNum(intoQty);
-                inventory.setUsableNumValue(intoQty.doubleValue());
-                inventory.setCreateBy(userName);
-                inventory.setCreateTime(LocalDateTime.now());
-                warehouseGoodsStockService.save(inventory);
-                goodsStockId = inventory.getId();
-            } else {
-                // 修改
-                ErpWarehouseGoodsStock update = new ErpWarehouseGoodsStock();
-                update.setId(warehouseGoodsStockList.get(0).getId());
-                update.setUpdateBy(userName);
-                update.setUpdateTime(LocalDateTime.now());
-                update.setTotalNum(warehouseGoodsStockList.get(0).getTotalNum() + intoQty);
-                update.setTotalNumValue(update.getTotalNum().doubleValue());
-                update.setUsableNum(warehouseGoodsStockList.get(0).getUsableNum() + intoQty);
-                update.setUsableNumValue(update.getUsableNum().doubleValue());
-                warehouseGoodsStockService.updateById(update);
-                goodsStockId = warehouseGoodsStockList.get(0).getId();
-            }
-
-            // 增加商品库存批次表
+            // 增加商品库存批次表 OGoodsInventoryBatch
             if(stockInItem.getInventoryMode()==0) {
                 // 普通模式
-                ErpWarehouseGoodsStockBatch inventoryBatch = new ErpWarehouseGoodsStockBatch();
-                inventoryBatch.setInventoryId(goodsStockId);
+                OGoodsInventoryBatch inventoryBatch = new OGoodsInventoryBatch();
+                inventoryBatch.setInventoryId(goodsInventoryId);
                 inventoryBatch.setBatchNum(DateUtils.parseDateToStr("yyyyMMddHHmmss", LocalDateTime.now()));
                 inventoryBatch.setOriginQty(intoQty);
                 inventoryBatch.setCurrentQty(intoQty);
-
-                inventoryBatch.setPurPrice(stockInItem.getPurPrice());
+                inventoryBatch.setPurPrice(stockInItem.getPurPrice() != null ? java.math.BigDecimal.valueOf(stockInItem.getPurPrice()) : null);
                 inventoryBatch.setPurId(stockInItem.getSourceId());
                 inventoryBatch.setPurItemId(stockInItem.getSourceItemId());
                 inventoryBatch.setMerchantId(stockInItem.getMerchantId());
                 inventoryBatch.setShopId(stockInItem.getShopId());
                 inventoryBatch.setInventoryMode(stockInItem.getInventoryMode());
-
-                inventoryBatch.setGoodsNo(oGoodsSku.getSkuCode());
-                inventoryBatch.setGoodsId(warehouseGoodsId);
+                inventoryBatch.setSkuId(Long.parseLong(stockInItem.getSkuId()));
+                inventoryBatch.setSkuCode(stockInItem.getSkuCode());
+                inventoryBatch.setGoodsId(Long.parseLong(stockInItem.getGoodsId()));
                 inventoryBatch.setWarehouseId(erpStockIn.getWarehouseId());
-                inventoryBatch.setVendorId(erpStockIn.getWarehouseId());
                 inventoryBatch.setPositionId(0L);
                 inventoryBatch.setPositionNum("");
                 inventoryBatch.setCreateTime(LocalDateTime.now());
                 inventoryBatch.setCreateBy(userName);
-                warehouseGoodsStockBatchService.save(inventoryBatch);
+                oGoodsInventoryBatchService.save(inventoryBatch);
             } else if(stockInItem.getInventoryMode()==1) {
                 // 一物一码
                 for (var batch : item.getBatchList()) {
-                    ErpWarehouseGoodsStockBatch inventoryBatch = new ErpWarehouseGoodsStockBatch();
-                    inventoryBatch.setInventoryId(goodsStockId);
+                    OGoodsInventoryBatch inventoryBatch = new OGoodsInventoryBatch();
+                    inventoryBatch.setInventoryId(goodsInventoryId);
                     inventoryBatch.setBatchNum(batch.getBarcode());
+                    inventoryBatch.setBarcode(batch.getBarcode());
                     inventoryBatch.setOriginQty(1);
                     inventoryBatch.setCurrentQty(1);
-                    inventoryBatch.setPurPrice(stockInItem.getPurPrice());
+                    inventoryBatch.setPurPrice(stockInItem.getPurPrice() != null ? java.math.BigDecimal.valueOf(stockInItem.getPurPrice()) : null);
                     inventoryBatch.setPurId(stockInItem.getSourceId());
                     inventoryBatch.setPurItemId(stockInItem.getSourceItemId());
                     inventoryBatch.setMerchantId(stockInItem.getMerchantId());
                     inventoryBatch.setShopId(stockInItem.getShopId());
                     inventoryBatch.setInventoryMode(stockInItem.getInventoryMode());
-
-                    inventoryBatch.setActualGoldWeight(batch.getGoldWeight());
-                    inventoryBatch.setActualSilverWeight(batch.getSilverWeight());
-                    inventoryBatch.setLaborCost(batch.getLaborCost());
+                    inventoryBatch.setActualGoldWeight(batch.getGoldWeight() != null ? java.math.BigDecimal.valueOf(batch.getGoldWeight()) : null);
+                    inventoryBatch.setActualSilverWeight(batch.getSilverWeight() != null ? java.math.BigDecimal.valueOf(batch.getSilverWeight()) : null);
+                    inventoryBatch.setLaborCost(batch.getLaborCost() != null ? java.math.BigDecimal.valueOf(batch.getLaborCost()) : null);
                     inventoryBatch.setCertificateNo(batch.getCertificateNo());
-
-                    inventoryBatch.setGoodsNo(oGoodsSku.getSkuCode());
-                    inventoryBatch.setGoodsId(warehouseGoodsId);
+                    inventoryBatch.setSkuId(Long.parseLong(stockInItem.getSkuId()));
+                    inventoryBatch.setSkuCode(stockInItem.getSkuCode());
+                    inventoryBatch.setGoodsId(Long.parseLong(stockInItem.getGoodsId()));
                     inventoryBatch.setWarehouseId(erpStockIn.getWarehouseId());
-                    inventoryBatch.setVendorId(erpStockIn.getWarehouseId());
                     inventoryBatch.setPositionId(0L);
                     inventoryBatch.setPositionNum("");
                     inventoryBatch.setCreateTime(LocalDateTime.now());
                     inventoryBatch.setCreateBy(userName);
-                    warehouseGoodsStockBatchService.save(inventoryBatch);
-
-                    //OGoodsInventoryBatch inventoryBatch = new OGoodsInventoryBatch();
-                    //                    inventoryBatch.setInventoryId(Long.parseLong(goodsInventoryId));
-                    //                    inventoryBatch.setMerchantId(erpStockIn.getMerchantId());
-                    //                    inventoryBatch.setShopId(erpStockIn.getShopId());
-                    //                    inventoryBatch.setBatchNum(batch.getBarcode());
-                    //                    inventoryBatch.setBarcode(batch.getBarcode());
-                    //                    inventoryBatch.setOriginQty(1);
-                    //                    inventoryBatch.setCurrentQty(1);
-                    //                    inventoryBatch.setPurPrice(stockInItem.getPurPrice());
-                    //                    inventoryBatch.setPurId(stockInItem.getSourceId());
-                    //                    inventoryBatch.setPurItemId(stockInItem.getSourceItemId());
-                    //                    inventoryBatch.setSkuId(stockInItem.getSkuId());
-                    //                    inventoryBatch.setSkuCode(stockInItem.getSkuCode());
-                    //                    inventoryBatch.setGoodsId(stockInItem.getGoodsId());
-                    //                    inventoryBatch.setInventoryMode(stockInItem.getInventoryMode());
-                    //                    inventoryBatch.setWarehouseId(erpStockIn.getWarehouseId());
-                    //                    inventoryBatch.setPositionId(0L);
-                    //                    inventoryBatch.setActualGoldWeight(batch.getGoldWeight());
-                    //                    inventoryBatch.setActualSilverWeight(batch.getSilverWeight());
-                    //                    inventoryBatch.setLaborCost(batch.getLaborCost());
-                    //                    inventoryBatch.setCertificateNo(batch.getCertificateNo());
-                    ////                    inventoryBatch.setPositionNum(positionNum);
-                    ////                    inventoryBatch.setProductionDate(request.getProductionDate());
-                    ////                    inventoryBatch.setPeriod(request.getPeriod());
-                    //                    inventoryBatch.setCreateTime(LocalDateTime.now());
-                    //                    inventoryBatch.setCreateBy(userName);
-                    //                    inventoryBatchService.save(inventoryBatch);
+                    oGoodsInventoryBatchService.save(inventoryBatch);
                 }
             }
 
@@ -737,106 +549,6 @@ public class ErpStockInServiceImpl extends ServiceImpl<ErpStockInMapper, ErpStoc
             return null;
     }
 
-    /**
-     * 商户采购入库到云仓入库单确认并生成云仓仓库入库单
-     * @param stockInId 商户入库单ID（erp_stock_in）
-     * @param warehouseId 云仓仓库ID（erp_warehouse）
-     * @return
-     */
-    @Transactional(rollbackFor = Exception.class)
-    @Override
-    public ResultVo<Long> merchantStockInConfirmAndCreateCloudWarehouseStockIn(Long stockInId,Long warehouseId) {
-        ErpStockIn stockIn = mapper.selectById(stockInId);
-        if(stockIn==null) return ResultVo.error("入库单不存在");
-        else if(stockIn.getStatus().intValue()!=0) return ResultVo.error("入库单已经操作过了");
-
-        ErpWarehouse erpWarehouse = warehouseService.getById(warehouseId);
-        if(erpWarehouse==null) return ResultVo.error("仓库不存在");
-        if(erpWarehouse.getType()!=2) return ResultVo.error("仓库不是云仓，无法操作！");
-        if(!erpWarehouse.getWarehouseType().equals(EnumWarehouseType.CLOUD.getType())) return ResultVo.error("仓库不是系统云仓，无法操作！");
-        List<ErpStockInItem> stockInItemList = inItemService.list(new LambdaQueryWrapper<ErpStockInItem>().eq(ErpStockInItem::getStockInId, stockInId));
-        if(stockInItemList.isEmpty()) return ResultVo.error("数据错误！未找到入库单item");
-
-        // 开始新增云仓仓库入库单
-        ErpWarehouseStockIn vendorStockIn = new ErpWarehouseStockIn();
-        vendorStockIn.setStockInNum(stockIn.getStockInNum());
-        vendorStockIn.setStockInType(stockIn.getStockInType());
-        vendorStockIn.setSourceType(1);//来源（0自己入库1商户申请入库）
-        vendorStockIn.setSourceNo(stockIn.getStockInNum());
-        vendorStockIn.setGoodsUnit(stockIn.getSourceGoodsUnit());
-        vendorStockIn.setGoodsSkuUnit(stockIn.getSourceSpecUnit());
-        vendorStockIn.setTotal(stockIn.getSourceSpecUnitTotal());
-        vendorStockIn.setRemark(stockIn.getRemark());
-        vendorStockIn.setApplyId(stockIn.getStockInOperatorId()==null?stockIn.getMerchantId():Long.parseLong(stockIn.getStockInOperatorId()));
-        vendorStockIn.setApplyMan(stockIn.getStockInOperator());
-        vendorStockIn.setApplyMobile("");
-        vendorStockIn.setStatus(1);//状态（0申请中1待入库2已入库）
-        vendorStockIn.setCreateBy("仓库审核商户入库单");
-        vendorStockIn.setCreateTime(LocalDateTime.now());
-        vendorStockIn.setVendorId(warehouseId);
-        vendorStockIn.setVendorName(erpWarehouse.getWarehouseName());
-        vendorStockIn.setMerchantId(stockIn.getMerchantId());
-        vendorStockIn.setMerchantName("");
-        vendorStockInService.save(vendorStockIn);
-        // 开始新增云仓仓库入库明细
-        for(var item :stockInItemList){
-            ErpWarehouseStockInItem inItem = new ErpWarehouseStockInItem();
-            Long warehouseGoodsId = 0L;
-            // 查询skuid或skucode是否存在仓库商品表
-            List<ErpWarehouseGoods> warehouseGoodsList = warehouseGoodsService.list(
-                    new LambdaQueryWrapper<ErpWarehouseGoods>()
-                            .eq(ErpWarehouseGoods::getWarehouseId,warehouseId)
-                            .and(x->x.eq(ErpWarehouseGoods::getErpGoodsNo, item.getSkuCode()).or().eq(ErpWarehouseGoods::getErpGoodsNo, item.getSkuId())))
-                            ;
-            if(warehouseGoodsList.isEmpty()){
-                // 仓库商品表中不存在，新增
-                ErpWarehouseGoods warehouseGoods = new ErpWarehouseGoods();
-                warehouseGoods.setGoodsNo("WH"+erpWarehouse.getId()+item.getSkuCode());
-                warehouseGoods.setErpGoodsNo(item.getSkuCode());
-                warehouseGoods.setErpGoodsSign(item.getSkuId());
-                warehouseGoods.setGoodsName(item.getGoodsName());
-                warehouseGoods.setImageUrl(item.getGoodsImage());
-                warehouseGoods.setStandard(item.getSkuName());
-                warehouseGoods.setErpGoodsId(Long.parseLong(item.getGoodsId()));
-                warehouseGoods.setErpGoodsSkuId(Long.parseLong(item.getSkuId()));
-                warehouseGoods.setCreateBy("审核商户入库单自动添加商品");
-                warehouseGoods.setCreateTime(LocalDateTime.now());
-                warehouseGoods.setWarehouseNo(erpWarehouse.getWarehouseNo());
-                warehouseGoods.setWarehouseId(erpWarehouse.getId());
-                warehouseGoods.setWarehouseType(erpWarehouse.getWarehouseType());
-                warehouseGoods.setMerchantId(stockIn.getMerchantId());
-                warehouseGoodsService.save(warehouseGoods);
-                warehouseGoodsId = warehouseGoods.getId();
-            }else{
-                warehouseGoodsId = warehouseGoodsList.get(0).getId();
-            }
-
-            inItem.setStockInId(vendorStockIn.getId());
-            inItem.setGoodsId(warehouseGoodsId);
-            inItem.setGoodsName(item.getGoodsName());
-            inItem.setGoodsImage(item.getGoodsImage());
-            inItem.setSkuName(item.getSkuName());
-            inItem.setGoodsNo("WH"+erpWarehouse.getId()+item.getSkuCode());
-            inItem.setQuantity(item.getQuantity());
-            inItem.setInQuantity(0);
-            inItem.setStatus(0);
-            inItem.setCreateBy("审核商户入库单");
-            inItem.setCreateTime(LocalDateTime.now());
-            inItem.setVendorId(vendorStockIn.getVendorId());
-            inItem.setMerchantId(vendorStockIn.getMerchantId());
-            vendorStockInItemService.save(inItem);
-        }
-
-        // 更新自己的状态
-        ErpStockIn erpStockInUpdate =new ErpStockIn();
-        erpStockInUpdate.setId(stockIn.getId());
-        erpStockInUpdate.setUpdateBy("仓库审核");
-        erpStockInUpdate.setUpdateTime(LocalDateTime.now());
-        erpStockInUpdate.setStatus(1);//审核通过
-        mapper.updateById(erpStockInUpdate);
-
-        return ResultVo.success(vendorStockIn.getId());
-    }
 }
 
 

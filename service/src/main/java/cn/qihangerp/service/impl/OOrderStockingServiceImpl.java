@@ -55,17 +55,11 @@ public class OOrderStockingServiceImpl extends ServiceImpl<OOrderStockingMapper,
     private final ErpSalesOrderItemMapper erpSalesOrderItemMapper;
     private final ShopOrderService shopOrderService;
     private final ShopOrderItemMapper shopOrderItemMapper;
-    private final ErpWarehouseStockOutMapper warehouseStockOutMapper;
-    private final ErpWarehouseStockOutItemMapper warehouseStockOutItemMapper;
-    private final ErpWarehouseStockOutItemService warehouseStockOutItemService;
-    private final ErpWarehouseGoodsMapper warehouseGoodsMapper;
-    private final ErpWarehouseGoodsStockMapper warehouseGoodsStockMapper;
     private final ShopGoodsSkuService shopGoodsSkuMappingService;
     private final ErpWarehouseService erpWarehouseService;
     private final ErpSupplierCustomerMapper supplierCustomerMapper;
     private final ErpSupplierProductItemService supplierProductItemService;
     private final ErpSupplierProductItemMapper supplierProductItemMapper;
-    private final ErpWarehouseStockOutService erpWarehouseStockOutService;
 
 
     /**
@@ -138,21 +132,6 @@ public class OOrderStockingServiceImpl extends ServiceImpl<OOrderStockingMapper,
                 return ResultVo.error("订单商品:"+goodsSkuId+"在供应商中不存在");
             }
             warehouseGoodsId = supplierProductItem.getWarehouseGoodsId();
-
-            // 验证仓库商品是否存在
-            ErpWarehouseGoods warehouseGoods = warehouseGoodsMapper.selectById(warehouseGoodsId);
-            if (warehouseGoods == null) {
-                log.error("仓库商品不存在，跳过发货：warehouseGoodsId={}", warehouseGoodsId);
-                // 更新订单item备注
-                OOrderItem updateOrderItem = new OOrderItem();
-                updateOrderItem.setId(item.getId());
-                updateOrderItem.setUpdateTime(LocalDateTime.now());
-                updateOrderItem.setUpdateBy("仓库商品不存在");
-                updateOrderItem.setRemark("仓库商品不存在");
-                orderItemService.updateById(updateOrderItem);
-                fail++;
-                continue;
-            }
 
             // 查出商品所对应的供应商(没有供应商的，不是供应商发货的，一律不分配)
             OOrderStockingItem shipOrderItem = new OOrderStockingItem();
@@ -411,57 +390,6 @@ public class OOrderStockingServiceImpl extends ServiceImpl<OOrderStockingMapper,
                     }
                     item.setGoodsSkuId(goodsSkuId);
                     item.setGoodsId(goodsId);
-                    // 查询 仓库商品数据
-                    List<ErpWarehouseGoods> erpWarehouseGoods = warehouseGoodsMapper.selectList(new LambdaQueryWrapper<ErpWarehouseGoods>()
-                            .eq(ErpWarehouseGoods::getErpGoodsSkuId, item.getGoodsSkuId())
-                            .eq(ErpWarehouseGoods::getWarehouseId, shipperId)
-                    );
-                    if (erpWarehouseGoods.isEmpty()) {
-//                            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                        log.error("仓库没有找到该商品SKU:{}", goodsSkuId);
-//                            return ResultVo.error("仓库没有找到该商品SKU:" + goodsSkuId);
-                        OOrderItem updateOrderItem = new OOrderItem();
-                        updateOrderItem.setId(item.getId());
-                        updateOrderItem.setUpdateTime(LocalDateTime.now());
-                        updateOrderItem.setUpdateBy("仓库没有找到该商品SKU");
-                        updateOrderItem.setRemark("仓库没有找到该商品SKU");
-                        orderItemService.updateById(updateOrderItem);
-                        fail++;
-                        continue;
-                    }
-                    // 判断库存是否充足
-                    List<ErpWarehouseGoodsStock> erpWarehouseGoodsStocks = warehouseGoodsStockMapper.selectList(
-                            new LambdaQueryWrapper<ErpWarehouseGoodsStock>()
-                                    .eq(ErpWarehouseGoodsStock::getGoodsId, erpWarehouseGoods.get(0).getId())
-                                    .eq(ErpWarehouseGoodsStock::getWarehouseId, shipperId)
-                    );
-                    if (erpWarehouseGoodsStocks.isEmpty()) {
-//                            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-//                            return ResultVo.error("仓库库存不足!");
-                        log.error("仓库库存不足:{}", goodsSkuId);
-                        OOrderItem updateOrderItem = new OOrderItem();
-                        updateOrderItem.setId(item.getId());
-                        updateOrderItem.setUpdateTime(LocalDateTime.now());
-                        updateOrderItem.setUpdateBy("仓库库存不足");
-                        updateOrderItem.setRemark("仓库库存不足");
-                        orderItemService.updateById(updateOrderItem);
-                        fail++;
-                        continue;
-                    }
-                    int sum = erpWarehouseGoodsStocks.stream().mapToInt(ErpWarehouseGoodsStock::getUsableNum).sum();
-                    if (sum < item.getQuantity()) {
-//                            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-//                            return ResultVo.error("库存不足");
-                        log.error("仓库库存不足:{}", goodsSkuId);
-                        OOrderItem updateOrderItem = new OOrderItem();
-                        updateOrderItem.setId(item.getId());
-                        updateOrderItem.setUpdateTime(LocalDateTime.now());
-                        updateOrderItem.setUpdateBy("仓库库存不足");
-                        updateOrderItem.setRemark("仓库库存不足");
-                        orderItemService.updateById(updateOrderItem);
-                        fail++;
-                        continue;
-                    }
                     waitItemList.add(item);
                 }
                 if(waitItemList.isEmpty()){
@@ -547,44 +475,8 @@ public class OOrderStockingServiceImpl extends ServiceImpl<OOrderStockingMapper,
                             continue;
                         }
                         warehouseGoodsId = supplierProductItem.getWarehouseGoodsId();
-                        
-                        // 验证仓库商品是否存在
-                        ErpWarehouseGoods warehouseGoods = warehouseGoodsMapper.selectById(warehouseGoodsId);
-                        if (warehouseGoods == null) {
-                            log.error("仓库商品不存在，跳过发货：warehouseGoodsId={}", warehouseGoodsId);
-                            // 更新订单item备注
-                            OOrderItem updateOrderItem = new OOrderItem();
-                            updateOrderItem.setId(item.getId());
-                            updateOrderItem.setUpdateTime(LocalDateTime.now());
-                            updateOrderItem.setUpdateBy("仓库商品不存在");
-                            updateOrderItem.setRemark("仓库商品不存在");
-                            orderItemService.updateById(updateOrderItem);
-                            fail++;
-                            continue;
-                        }
                     } else if (shipperType == EnumShipType.CLOUD_WAREHOUSE.getIndex() ||
                              shipperType == EnumShipType.JD_CLOUD_WAREHOUSE.getIndex() || shipperType == EnumShipType.JKY_CLOUD_WAREHOUSE.getIndex()) {
-                        /***** 云仓(系统云仓、三方云仓)：*****/
-                        // 云仓：验证 erp_warehouse_goods 是否存在
-                        ErpWarehouseGoods warehouseGoods = warehouseGoodsMapper.selectOne(
-                            new LambdaQueryWrapper<ErpWarehouseGoods>()
-                                .eq(ErpWarehouseGoods::getWarehouseId, shipperId)
-                                .eq(ErpWarehouseGoods::getErpGoodsSkuId, item.getGoodsSkuId())
-                        );
-                        if (warehouseGoods == null) {
-                            log.error("订单商品在仓库中不存在，跳过发货：商品SKU ID={}, 仓库ID={}", 
-                                    item.getGoodsSkuId(), shipperId);
-                            // 更新订单item备注
-                            OOrderItem updateOrderItem = new OOrderItem();
-                            updateOrderItem.setId(item.getId());
-                            updateOrderItem.setUpdateTime(LocalDateTime.now());
-                            updateOrderItem.setUpdateBy("仓库商品不存在");
-                            updateOrderItem.setRemark("仓库商品不存在");
-                            orderItemService.updateById(updateOrderItem);
-                            fail++;
-                            continue;
-                        }
-                        warehouseGoodsId = warehouseGoods.getId();
                     }
                     
                     // 添加发货子订单
@@ -812,21 +704,6 @@ public class OOrderStockingServiceImpl extends ServiceImpl<OOrderStockingMapper,
                         continue;
                     }
                     warehouseGoodsId = supplierProductItem.getWarehouseGoodsId();
-                    
-                    // 验证仓库商品是否存在
-                    ErpWarehouseGoods warehouseGoods = warehouseGoodsMapper.selectById(warehouseGoodsId);
-                    if (warehouseGoods == null) {
-                        log.error("仓库商品不存在，跳过发货：warehouseGoodsId={}", warehouseGoodsId);
-                        // 更新订单item备注
-                        OOrderItem updateOrderItem = new OOrderItem();
-                        updateOrderItem.setId(item.getId());
-                        updateOrderItem.setUpdateTime(LocalDateTime.now());
-                        updateOrderItem.setUpdateBy("仓库商品不存在");
-                        updateOrderItem.setRemark("仓库商品不存在");
-                        orderItemService.updateById(updateOrderItem);
-                        fail++;
-                        continue;
-                    }
 
                     // 添加供应商发货子订单
                     OOrderStockingItem shipOrderItem = new OOrderStockingItem();
@@ -1212,8 +1089,6 @@ public class OOrderStockingServiceImpl extends ServiceImpl<OOrderStockingMapper,
 //        OOrder erpOrder = orderService.getById(shipOrder.getOOrderId());
 //        if(erpOrder==null) return ResultVo.error("订单库找不到订单！");
         int shipSuccess=0;
-        // 出库单item list
-        List<ErpWarehouseStockOutItem> stockOutItemList = new ArrayList<>();
 
         // 发货记录item
 //        List<OShipmentItem> shipmentItemList = new ArrayList<>();
@@ -1239,37 +1114,6 @@ public class OOrderStockingServiceImpl extends ServiceImpl<OOrderStockingMapper,
                 log.error("=====仓库发货失败=====发货订单item已经发货");
                 continue;
             }
-            // 查找仓库商品，转换成仓库商品
-            // 查询 仓库商品数据
-            List<ErpWarehouseGoods> erpWarehouseGoods = warehouseGoodsMapper.selectList(new LambdaQueryWrapper<ErpWarehouseGoods>()
-                    .eq(ErpWarehouseGoods::getErpGoodsSkuId, orderItem.getGoodsSkuId())
-                    .eq(ErpWarehouseGoods::getWarehouseId, shipOrder.getShipperId())
-            );
-            if (erpWarehouseGoods.isEmpty()) {
-                TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
-                log.error("仓库没有找到该商品SKU:{}", orderItem.getGoodsSkuId());
-                return ResultVo.error("仓库没有找到该商品SKU:" + orderItem.getGoodsSkuId());
-            }
-
-            // 加入仓库出库单item
-            ErpWarehouseStockOutItem stockOutItem = new ErpWarehouseStockOutItem();
-            stockOutItem.setType(EnumStockOutType.ORDER_STOCK_OUT.getIndex());
-            stockOutItem.setOriginalQuantity(item.getShipQuantity());
-            stockOutItem.setSourceOrderId(orderItem.getShipOrderId());
-            stockOutItem.setSourceOrderItemId(orderItem.getId());
-            stockOutItem.setSourceOrderNum(orderItem.getOrderNum());
-            stockOutItem.setOutQuantity(0);
-            stockOutItem.setStatus(0);
-            stockOutItem.setGoodsId(erpWarehouseGoods.get(0).getId());
-            stockOutItem.setGoodsName(erpWarehouseGoods.get(0).getGoodsName());
-            stockOutItem.setGoodsNum(erpWarehouseGoods.get(0).getGoodsNo());
-            stockOutItem.setGoodsImage(erpWarehouseGoods.get(0).getImageUrl());
-            stockOutItem.setSkuName(erpWarehouseGoods.get(0).getStandard());
-            stockOutItem.setWarehouseId(shipOrder.getShipperId());
-            stockOutItem.setVendorId(shipOrder.getShipperId());
-            stockOutItem.setMerchantId(orderItem.getMerchantId());
-            stockOutItemList.add(stockOutItem);
-
             // 加入发货记录
 //            OShipmentItem shipmentItem = new OShipmentItem();
 //            shipmentItem.setOrderId(orderItem.getOOrderId().toString());
@@ -1455,32 +1299,6 @@ public class OOrderStockingServiceImpl extends ServiceImpl<OOrderStockingMapper,
                 shopOrderUpdate.setUpdateOn(LocalDateTime.now());
                 shopOrderUpdate.setId(sh.getId());
                 shopOrderService.updateById(shopOrderUpdate);
-            }
-        }
-
-        // 添加仓库出库单
-        if(!stockOutItemList.isEmpty()) {
-            ErpWarehouseStockOut stockOut = new ErpWarehouseStockOut();
-            stockOut.setOutNum("DDCK-" + DateUtils.parseDateToStr("yyyyMMdd", LocalDateTime.now()) + "-" + System.currentTimeMillis() / 1000);
-            stockOut.setSourceId(shipOrder.getId());
-            stockOut.setSourceNum(shipOrder.getOrderNum());
-            stockOut.setType(EnumStockOutType.ORDER_STOCK_OUT.getIndex());
-            stockOut.setGoodsUnit(stockOutItemList.size());
-            stockOut.setSpecUnit(stockOutItemList.size());
-            stockOut.setSpecUnitTotal(stockOutItemList.stream().mapToInt(x->x.getOriginalQuantity()).sum());
-            stockOut.setRemark("");
-            stockOut.setStatus(0);
-            stockOut.setPrintStatus(0);
-            stockOut.setCreateBy("订单发货生成出库单");
-            stockOut.setCreateTime(LocalDateTime.now());
-            stockOut.setVendorId(shipOrder.getWarehouseId());
-            stockOut.setMerchantId(shipOrder.getMerchantId());
-            warehouseStockOutMapper.insert(stockOut);
-            for (var s : stockOutItemList) {
-                s.setEntryId(stockOut.getId());
-                s.setCreateTime(LocalDateTime.now());
-                s.setCreateBy("订单发货生成出库单");
-                warehouseStockOutItemMapper.insert(s);
             }
         }
 
@@ -2141,73 +1959,6 @@ public class OOrderStockingServiceImpl extends ServiceImpl<OOrderStockingMapper,
 
         }
         log.info("============供应商发货确认成功===================");
-
-        // 生成仓库出库单（供应商发货时）- 内联实现避免跨事务问题
-        if(shipOrder.getWarehouseId() != null && shipOrder.getWarehouseId() > 0){
-            try {
-                String outNum = DateUtils.parseDateToStr("yyyyMMddHHmmss", LocalDateTime.now());
-                Map<Long, List<OOrderStockingItem>> goodsGroup = shipOrderItemList.stream()
-                        .collect(Collectors.groupingBy(OOrderStockingItem::getWarehouseGoodsId));
-                long totalQty = shipOrderItemList.stream().mapToLong(OOrderStockingItem::getQuantity).sum();
-
-                // 创建出库单主表
-                ErpWarehouseStockOut stockOut = new ErpWarehouseStockOut();
-                stockOut.setVendorId(shipOrder.getShipperId());
-                stockOut.setMerchantId(shipOrder.getMerchantId());
-                stockOut.setOutNum(outNum);
-                stockOut.setType(1);
-                stockOut.setSourceNum(shipOrder.getOrderNum());
-                stockOut.setSourceId(shipOrder.getId());
-                stockOut.setRemark("供应商手动发货生成出库单");
-                stockOut.setCreateBy(operator);
-                stockOut.setCreateTime(LocalDateTime.now());
-                stockOut.setGoodsUnit(goodsGroup.size());
-                stockOut.setSpecUnit(shipOrderItemList.size());
-                stockOut.setSpecUnitTotal((int) totalQty);
-                stockOut.setOutTotal(0);
-                stockOut.setOperatorId(shipOrder.getShipperId());
-                stockOut.setOperatorName(operator);
-                stockOut.setPrintStatus(0);
-                stockOut.setStatus(0);
-                warehouseStockOutMapper.insert(stockOut);
-
-                // 创建出库单明细
-                List<ErpWarehouseStockOutItem> outItemList = new ArrayList<>();
-                for (OOrderStockingItem item : shipOrderItemList) {
-//                    ErpWarehouseGoods warehouseGoods = warehouseGoodsMapper.selectById(item.getWarehouseGoodsId());
-//                    if (warehouseGoods == null) {
-//                        log.error("仓库商品不存在: warehouseGoodsId={}", item.getWarehouseGoodsId());
-//                        continue;
-//                    }
-
-                    ErpWarehouseStockOutItem outItem = new ErpWarehouseStockOutItem();
-                    outItem.setVendorId(shipOrder.getShipperId());
-                    outItem.setEntryId(stockOut.getId());
-                    outItem.setType(1);
-                    outItem.setGoodsId(item.getWarehouseGoodsId());
-                    outItem.setGoodsName(item.getGoodsName());
-                    outItem.setGoodsNum(item.getGoodsNum());
-                    outItem.setGoodsImage(item.getGoodsImg());
-                    outItem.setSkuName(item.getSkuName());
-                    outItem.setOriginalQuantity(item.getQuantity());
-                    outItem.setOutQuantity(0);
-                    outItem.setStatus(0);
-                    outItem.setCreateBy(operator);
-                    outItem.setCreateTime(LocalDateTime.now());
-                    outItem.setWarehouseId(shipOrder.getWarehouseId());
-                    outItem.setMerchantId(shipOrder.getMerchantId());
-                    outItem.setVendorId(shipOrder.getShipperId());
-                    outItemList.add(outItem);
-                }
-                if (!outItemList.isEmpty()) {
-                    warehouseStockOutItemService.saveBatch(outItemList);
-                }
-
-                log.info("==========生成仓库出库单成功,出库单ID: {}, 出库单号: {}", stockOut.getId(), outNum);
-            } catch (Exception e) {
-                log.error("==========生成仓库出库单异常: {}", e.getMessage());
-            }
-        }
 
 //        TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
         // 推送到店铺由controller进行操作
