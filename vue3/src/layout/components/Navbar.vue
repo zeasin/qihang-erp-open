@@ -21,7 +21,7 @@
                 :type="item.level === 'high' ? 'danger' : item.level === 'medium' ? 'warning' : 'info'"
                 size="small"
                 effect="plain"
-              >{{ item.type === 'sales_zero' ? '销售异常' : item.type === 'ship_pending' ? '发货积压' : item.type === 'refund_excess' ? '退款过多' : item.type === 'ai_analysis' ? 'AI分析' : '通知' }}</el-tag>
+              >{{ getTypeName(item.type) }}</el-tag>
               <span class="notif-time">{{ formatTime(item.createdTime) }}</span>
             </div>
             <div class="notif-item-title">{{ item.title }}</div>
@@ -114,6 +114,18 @@ function formatTime(t: string) {
   if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前'
   if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前'
   return d.toLocaleDateString('zh-CN')
+}
+
+function getTypeName(type: string) {
+  const typeMap: Record<string, string> = {
+    sales_zero: '销售异常',
+    ship_pending: '发货积压',
+    refund_excess: '退款过多',
+    stock_low: '库存不足',
+    order_timeout: '订单超时',
+    ai_analysis: 'AI分析'
+  }
+  return typeMap[type] || '系统通知'
 }
 
 async function loadNotifs() {

@@ -4,10 +4,14 @@ import cn.qihangerp.erp.notify.NotifierService;
 import cn.qihangerp.erp.serviceImpl.ai.AiOrchestrationService;
 import cn.qihangerp.erp.serviceImpl.ai.InventoryTools;
 import cn.qihangerp.erp.serviceImpl.ai.RefundTools;
+import cn.qihangerp.model.entity.OGoodsInventory;
+import cn.qihangerp.model.entity.OGoodsSku;
 import cn.qihangerp.model.entity.ShopRefund;
 import cn.qihangerp.model.entity.SysMessage;
 import cn.qihangerp.model.vo.SalesDailyVo;
 import cn.qihangerp.service.ISysMessageService;
+import cn.qihangerp.service.OGoodsInventoryService;
+import cn.qihangerp.service.OGoodsSkuService;
 import cn.qihangerp.service.OOrderService;
 import cn.qihangerp.service.ShopRefundService;
 import cn.qihangerp.sse.SseService;
@@ -37,6 +41,8 @@ public class MessageScheduler {
     private final InventoryTools inventoryTools;
     private final NotifierService notifierService;
     private final SseService sseService;
+    private final OGoodsSkuService goodsSkuService;
+    private final OGoodsInventoryService goodsInventoryService;
 
     private static final List<String> NEED_NOTIFY_TYPES = List.of("stock_low", "order_timeout", "ai_analysis");
 
@@ -83,8 +89,37 @@ public class MessageScheduler {
     }
 
     private void checkStockLow() {
-        // TODO: query OGoodsSku with lowQty > availableQuantity
-        // save("stock_low", "high", "库存不足: 商品名", "SKU xxx 库存仅剩 n 件")
+        LambdaQueryWrapper<OGoodsSku> skuWrapper = new LambdaQueryWrapper<>();
+        skuWrapper.isNotNull(OGoodsSku::getLowQty);
+        skuWrapper.gt(OGoodsSku::getLowQty, 0);
+        List<OGoodsSku> skuList = goodsSkuService.list(skuWrapper);
+        if (skuList.isEmpty()) return;
+
+        int warningCount = 0;
+        for (OGoodsSku sku : skuList) {
+            LambdaQueryWrapper<OGoodsInventory> invWrapper = new LambdaQueryWrapper<>();
+            invWrapper.eq(OGoodsInventory::getSkuId, sku.getId());
+            List<OGoodsInventory> inventories = goodsInventoryService.list(invWrapper);
+
+            int totalAvailable = inventories.stream()
+                    .mapToInt(inv -> inv.getAvailableQuantity() != null ? inv.getAvailableQuantity() : 0)
+                    .sum();
+
+            if (totalAvailable <= sku.getLowQty()) {
+                String goodsName = sku.getGoodsName() != null ? sku.getGoodsName() : "";
+                String skuName = sku.getSkuName() != null ? sku.getSkuName() : "";
+                String skuCode = sku.getSkuCode() != null ? sku.getSkuCode() : "";
+                save("stock_low", "high", "库存不足: " + goodsName,
+                        "SKU " + skuCode + " " + skuName + " 可用库存" + totalAvailable + " 件，低于预警值" + sku.getLowQty() + " 件",
+                        "/goods/sku_list", "system");
+                warningCount++;
+                log.info("库存预警: SKU={}, 可用库存={}, 预警值={}", skuCode, totalAvailable, sku.getLowQty());
+            }
+        }
+
+        if (warningCount > 0) {
+            log.info("库存预警检查完成，共发现 {} 个 SKU 库存不足", warningCount);
+        }
     }
 
     private void checkOrderTimeout() {
