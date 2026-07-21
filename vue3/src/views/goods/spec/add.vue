@@ -46,7 +46,7 @@
                   :action="uploadImgUrl"
                   :show-file-list="false"
                   :headers="headers"
-                  :on-success="(response, file, fileList) => handleUploadSuccess(response, file, fileList, color)"
+                  :on-success="(response: any, file: any, fileList: any) => handleUploadSuccess(response, file, fileList, color)"
                   :before-upload="handleBeforeUpload">
                   <img v-if="form.colorImages[color]" :src="form.colorImages[color]" class="avatar">
                   <el-icon v-else class="avatar-uploader-icon" :size="28"><Plus /></el-icon>
@@ -439,7 +439,7 @@ onMounted(() => {
   listSupplier({ pageNum: 1, pageSize: 100 }).then((resp: any) => {
     supplierList.value = resp.rows || []
   })
-  getGoods(route.query.id).then((response: any) => {
+  getGoods(route.query.id as string).then((response: any) => {
     Object.assign(goods, response.data || {})
     goods.shipType = response.data.shipType + ''
     form.id = response.data.id

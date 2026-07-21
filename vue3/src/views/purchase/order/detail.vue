@@ -97,7 +97,7 @@ const itemList = ref<any[]>([])
 const rules = reactive<Record<string, any>>({})
 
 function getDetail() {
-  getPurchaseOrder(route.query.id).then((response: any) => {
+  getPurchaseOrder(route.query.id as string).then((response: any) => {
     getSupplier(response.data.supplierId).then((resp: any) => {
       Object.assign(form, response.data || {})
       form.supplier = resp.data?.name

@@ -103,7 +103,7 @@
                     :action="uploadImgUrl"
                     :show-file-list="false"
                     :headers="headers"
-                    :on-success="(response, file, fileList) =>
+                    :on-success="(response: any, file: any, fileList: any) =>
                 handleUploadSuccess(
                   response,
                   file,
@@ -204,12 +204,12 @@
               <el-input v-model="scope.row.unit" placeholder="单位" />
             </template>
           </el-table-column>
-          <el-table-column label="采购价" prop="purPrice" width="120" v-if="form.priceType==0">
+          <el-table-column label="采购价" prop="purPrice" width="120" v-if="form.priceType=='0'">
             <template #default="scope">
               <el-input v-model="scope.row.purPrice" placeholder="采购价" @input="handlePurPriceInput(scope.row)" />
             </template>
           </el-table-column>
-          <el-table-column label="零售价" prop="retailPrice" width="120" v-if="form.priceType==0">
+          <el-table-column label="零售价" prop="retailPrice" width="120" v-if="form.priceType=='0'">
             <template #default="scope">
               <el-input v-model="scope.row.retailPrice" placeholder="零售价" @input="handleRetailPriceInput(scope.row)" />
             </template>
@@ -288,7 +288,8 @@ const form = reactive({
   sizeValues: undefined as any,
   styleValues: undefined as any,
   specList: [] as any[],
-  provinces: [] as any[]
+  provinces: [] as any[],
+  remark: undefined as any
 })
 
 const supplierList = ref<any[]>([])
@@ -582,7 +583,7 @@ function submitForm() {
             ElMessage.error('商品规格编码不能为空')
             return
           }
-          if (form.priceType == 0) {
+          if (form.priceType == '0') {
             if (sp.purPrice == null) {
               ElMessage.error('请填写采购价')
               return

@@ -50,7 +50,7 @@
           </template>
         </el-table-column>
       </el-table>
-      <pagination v-show="logTotal > 0" :total="logTotal" v-model:page="logPageNum" v-model:limit="logPageSize" @pagination="handleViewLogs(taskId)" />
+      <pagination v-show="logTotal > 0" :total="logTotal" v-model:page="logPageNum" v-model:limit="logPageSize" @pagination="handleViewLogs(taskId as number)" />
     </el-dialog>
 
     <el-dialog :title="title" v-model="open" width="780px" append-to-body>
@@ -134,9 +134,10 @@ const form = reactive<Record<string, any>>({
   remark: undefined
 })
 
-const queryParams = reactive({
+const queryParams = reactive<Record<string, any>>({
   pageNum: 1,
   pageSize: 20,
+  taskName: undefined,
   noticeTitle: undefined,
   status: undefined
 })

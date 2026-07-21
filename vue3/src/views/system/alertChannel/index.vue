@@ -10,7 +10,7 @@
       <el-col :span="1.5">
         <el-button type="danger" plain size="small" :disabled="multiple" @click="handleDelete"><el-icon><Delete /></el-icon>删除</el-button>
       </el-col>
-      <right-toolbar @queryTable="getList" />
+      <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
     <el-table v-loading="loading" :data="list" @selection-change="handleSelectionChange">
@@ -92,6 +92,7 @@ const loading = ref(true)
 const ids = ref<number[]>([])
 const single = ref(true)
 const multiple = ref(true)
+const showSearch = ref(true)
 const total = ref(0)
 const list = ref<any[]>([])
 const title = ref('')

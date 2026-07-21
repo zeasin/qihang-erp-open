@@ -418,7 +418,7 @@ const form = reactive<Record<string, any>>({
   sellerBrandId: null
 })
 
-const pushForm = reactive({
+const pushForm = reactive<Record<string, any>>({
   merchantIds: null,
   goodsIds: null
 })

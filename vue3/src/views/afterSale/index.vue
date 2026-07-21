@@ -444,7 +444,7 @@ function submitForm() {
 onMounted(async () => {
   try {
     const warehouseRes = await listWarehouse({})
-    warehouseList.value = warehouseRes.rows || []
+    warehouseList.value = warehouseRes.data?.rows || []
   } catch { /* ignore */ }
   getList()
 })

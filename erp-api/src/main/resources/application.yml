@@ -5,7 +5,7 @@ spring:
   application:
     name: erp-api
   profiles:
-    active: dev
+    active: demo
 
   data:
     # redis 配置

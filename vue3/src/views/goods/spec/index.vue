@@ -349,7 +349,8 @@ function handleExport() {
     method: 'get',
     params: queryParams,
     responseType: 'blob'
-  }).then((blob: Blob) => {
+  }).then((res: any) => {
+    const blob = res instanceof Blob ? res : new Blob([res.data])
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
     link.download = `goods_sku_list_${new Date().getTime()}.xlsx`

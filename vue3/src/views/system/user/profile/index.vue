@@ -79,7 +79,7 @@ const profile = reactive<Record<string, any>>({})
 async function getUser() {
   const res = await getUserProfile()
   Object.assign(profile, res.data || res)
-  roleGroup.value = res.roleGroup || ''
+  roleGroup.value = res.data?.roleGroup || ''
 }
 
 onMounted(getUser)

@@ -159,7 +159,7 @@ const form = reactive<Record<string, any>>({
   dictType: undefined
 })
 
-const queryParams = reactive({
+const queryParams = reactive<Record<string, any>>({
   pageNum: 1,
   pageSize: 10,
   dictType: undefined,

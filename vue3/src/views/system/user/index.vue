@@ -33,10 +33,10 @@
           <el-form-item label="状态" prop="status">
             <el-select @change="handleQuery" v-model="queryParams.status" placeholder="用户状态" clearable style="width: 240px">
               <el-option
-                v-for="dict in dict.sys_normal_disable"
-                :key="dict.value"
-                :label="dict.label"
-                :value="dict.value"
+                v-for="d in dict.sys_normal_disable"
+                :key="d.value"
+                :label="d.label"
+                :value="d.value"
               />
             </el-select>
           </el-form-item>
@@ -138,7 +138,7 @@
               >
                 <el-icon><Delete /></el-icon>删除
               </el-button>
-              <el-dropdown size="small" @command="(command) => handleCommand(command, scope.row)" v-hasPermi="['system:user:resetPwd', 'system:user:edit']">
+              <el-dropdown size="small" @command="(command: any) => handleCommand(command, scope.row)" v-hasPermi="['system:user:resetPwd', 'system:user:edit']">
                 <el-button size="small" type="text">
                   <el-icon><ArrowDown /></el-icon>更多
                 </el-button>
