@@ -48,3 +48,9 @@ docs/TEST-REPORT-20260715.md
 docs/AI-IMPLEMENTATION-PLAN.md
 docs/AI-INFRASTRUCTURE.md
 .mimocode/
+
+# Docker 部署配置（本地使用，不公开）
+docker-compose*.yml
+**/Dockerfile
+**/.dockerignore
+vue3/nginx.conf
