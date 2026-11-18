@@ -48,7 +48,7 @@
                   :headers="headers"
                   :on-success="(response: any, file: any) => handleUploadSuccess(response, file, color)"
                   :before-upload="handleBeforeUpload">
-                  <img v-if="form.colorImages[color]" :src="resolveImageUrl(form.colorImages[color])" class="avatar" />
+                  <img v-if="form.colorImageBlobs[color] || form.colorImages[color]" :src="form.colorImageBlobs[color] || resolveImageUrl(form.colorImages[color])" class="avatar" />
                   <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
                 </el-upload>
                 <span>{{ form.colorNames[color] }}</span>
@@ -141,7 +141,7 @@ import { Plus } from '@element-plus/icons-vue'
 import { listCategory } from '@/api/goods/category'
 import { addGoodsSku, getGoods } from '@/api/goods/goods'
 import { getToken } from '@/utils/auth'
-import { resolveImageUrl } from '@/utils/image'
+import { resolveImageUrl, loadImageBlobUrl } from '@/utils/image'
 import { pcaTextArr } from '@/utils/chinaAreaData'
 import Treeselect from '@/components/Treeselect/index.vue'
 import type { FormInstance } from 'element-plus'
@@ -165,6 +165,7 @@ const form = reactive<Record<string, any>>({
   town: undefined,
   colorValues: [],
   colorImages: {},
+  colorImageBlobs: {} as Record<string, string>,
   colorNames: {},
   sizeValues: [],
   styleValues: [],
@@ -210,6 +211,9 @@ function handleUploadSuccess(response: any, file: any, color: string) {
     form.colorImages[color] = response.url
   })
   form.colorImages = { ...form.colorImages, [color]: response.url }
+  loadImageBlobUrl(response.url).then((blobUrl) => {
+    if (blobUrl) form.colorImageBlobs[color] = blobUrl
+  })
 }
 
 function buildTree(list: any[], parentId: number): any[] {

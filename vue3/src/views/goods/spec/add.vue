@@ -48,7 +48,7 @@
                   :headers="headers"
                   :on-success="(response: any, file: any, fileList: any) => handleUploadSuccess(response, file, fileList, color)"
                   :before-upload="handleBeforeUpload">
-                  <img v-if="form.colorImages[color]" :src="resolveImageUrl(form.colorImages[color])" class="avatar">
+                  <img v-if="form.colorImageBlobs[color] || form.colorImages[color]" :src="form.colorImageBlobs[color] || resolveImageUrl(form.colorImages[color])" class="avatar">
                   <el-icon v-else class="avatar-uploader-icon" :size="28"><Plus /></el-icon>
                 </el-upload>
                 <span>{{ form.colorNames[color] }}</span>
@@ -160,7 +160,7 @@ import { listCategory } from '@/api/goods/category'
 import { listCategoryAttributeValue } from '@/api/goods/categoryAttributeValue'
 import { addGoodsSku, getGoods } from '@/api/goods/goods'
 import { getToken } from '@/utils/auth'
-import { resolveImageUrl } from '@/utils/image'
+import { resolveImageUrl, loadImageBlobUrl } from '@/utils/image'
 import { listSupplier } from '@/api/goods/supplier'
 import { listCategoryAttribute } from '@/api/goods/categoryAttribute'
 import { limitDecimalLength, stringToNumber } from '@/utils/numberInput'
@@ -192,6 +192,7 @@ const form = reactive<Record<string, any>>({
   town: undefined,
   colorValues: undefined,
   colorImages: {},
+  colorImageBlobs: {} as Record<string, string>,
   colorNames: {},
   sizeValues: undefined,
   styleValues: undefined,
@@ -273,6 +274,9 @@ function handleBeforeUpload(file: File) {
 function handleUploadSuccess(response: any, file: any, fileList: any[], color: string) {
   console.log('====上传成功回调====', color, response.url)
   form.colorImages[color] = response.url
+  loadImageBlobUrl(response.url).then((blobUrl) => {
+    if (blobUrl) form.colorImageBlobs[color] = blobUrl
+  })
   console.log('=====上传回调赋值=====', form.colorImages)
 }
 
