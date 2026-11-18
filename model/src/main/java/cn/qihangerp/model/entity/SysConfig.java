@@ -2,17 +2,21 @@ package cn.qihangerp.model.entity;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import com.baomidou.mybatisplus.annotation.IdType;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 
 /**
  * 参数配置表
- * @TableName sys_config
  */
 @Data
+@TableName("sys_config")
 public class SysConfig implements Serializable {
     /**
      * 参数主键
      */
+    @TableId(value = "config_id", type = IdType.AUTO)
     private Integer configId;
 
     /**

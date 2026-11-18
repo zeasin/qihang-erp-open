@@ -48,7 +48,7 @@
                   :headers="headers"
                   :on-success="(response: any, file: any) => handleUploadSuccess(response, file, color)"
                   :before-upload="handleBeforeUpload">
-                  <img v-if="form.colorImages[color]" :src="form.colorImages[color]" class="avatar" />
+                  <img v-if="form.colorImages[color]" :src="resolveImageUrl(form.colorImages[color])" class="avatar" />
                   <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
                 </el-upload>
                 <span>{{ form.colorNames[color] }}</span>
@@ -141,6 +141,7 @@ import { Plus } from '@element-plus/icons-vue'
 import { listCategory } from '@/api/goods/category'
 import { addGoodsSku, getGoods } from '@/api/goods/goods'
 import { getToken } from '@/utils/auth'
+import { resolveImageUrl } from '@/utils/image'
 import { pcaTextArr } from '@/utils/chinaAreaData'
 import Treeselect from '@/components/Treeselect/index.vue'
 import type { FormInstance } from 'element-plus'

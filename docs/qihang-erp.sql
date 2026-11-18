@@ -6826,7 +6826,7 @@ CREATE TABLE `sys_menu`  (
   `update_time` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT NULL COMMENT '更新时间',
   `remark` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci NULL DEFAULT '' COMMENT '备注',
   PRIMARY KEY (`menu_id`) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2177 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜单权限表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 2187 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_general_ci COMMENT = '菜单权限表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of sys_menu
@@ -6904,6 +6904,8 @@ INSERT INTO `sys_menu` VALUES (2178, '模型配置', 2177, 1, 'config', 'ai/conf
 INSERT INTO `sys_menu` VALUES (2179, '智能分析', 2177, 2, 'analysis', 'ai/analysis', '', 1, 0, 'C', '0', '0', 'ai:analysis:list', 'chart', 'admin', NOW(), '', NULL, 'AI智能分析');
 -- 通知渠道配置菜单（放在系统设置 parent_id=5 下，order_num=3）
 INSERT INTO `sys_menu` VALUES (2180, '通知渠道', 5, 3, 'alertChannel', 'system/alertChannel/index', '', 1, 0, 'C', '0', '0', '', 'message', 'admin', NOW(), '', NULL, '通知渠道配置');
+-- MinIO 对象存储配置菜单（放在系统设置 parent_id=5 下，order_num=4）
+INSERT INTO `sys_menu` VALUES (2186, 'minio配置', 5, 4, 'minioConfig', 'system/minioConfig/index', '', 1, 0, 'C', '0', '0', 'system:minio:config', 'system', 'admin', NOW(), '', NULL, 'MinIO 对象存储连接配置');
 
 
 

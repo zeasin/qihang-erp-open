@@ -10,7 +10,7 @@ export function listConfig(query?: Record<string, any>) {
 
 export function getConfig(configId: number | string) {
   return request({
-    url: '/api/sys-api/system/config/getConfigValue/' + configId,
+    url: '/api/sys-api/system/config/' + configId,
     method: 'get'
   })
 }

@@ -48,7 +48,7 @@
                   :headers="headers"
                   :on-success="(response: any, file: any, fileList: any) => handleUploadSuccess(response, file, fileList, color)"
                   :before-upload="handleBeforeUpload">
-                  <img v-if="form.colorImages[color]" :src="form.colorImages[color]" class="avatar">
+                  <img v-if="form.colorImages[color]" :src="resolveImageUrl(form.colorImages[color])" class="avatar">
                   <el-icon v-else class="avatar-uploader-icon" :size="28"><Plus /></el-icon>
                 </el-upload>
                 <span>{{ form.colorNames[color] }}</span>
@@ -160,6 +160,7 @@ import { listCategory } from '@/api/goods/category'
 import { listCategoryAttributeValue } from '@/api/goods/categoryAttributeValue'
 import { addGoodsSku, getGoods } from '@/api/goods/goods'
 import { getToken } from '@/utils/auth'
+import { resolveImageUrl } from '@/utils/image'
 import { listSupplier } from '@/api/goods/supplier'
 import { listCategoryAttribute } from '@/api/goods/categoryAttribute'
 import { limitDecimalLength, stringToNumber } from '@/utils/numberInput'

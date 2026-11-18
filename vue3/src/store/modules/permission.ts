@@ -16,6 +16,7 @@ const viewsMap: Record<string, () => Promise<any>> = {
   'system/dict/index': () => import('@/views/system/dict/index.vue'),
   'system/dict/data': () => import('@/views/system/dict/data.vue'),
   'system/config/index': () => import('@/views/system/config/index.vue'),
+  'system/minioConfig/index': () => import('@/views/system/minioConfig/index.vue'),
   'system/task/index': () => import('@/views/system/task/index.vue'),
   'goods/index': () => import('@/views/goods/index.vue'),
   'goods/goods_list': () => import('@/views/goods/goods_list.vue'),

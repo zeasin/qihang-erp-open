@@ -75,10 +75,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/*/order/get_detail").permitAll()
                         .requestMatchers(HttpMethod.GET, "/refund/get_detail").permitAll()
                         .requestMatchers(HttpMethod.GET, "/images/preview/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/system/config/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/captchaImage").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/sys-api/captchaImage").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/sys-api/system/config/**").permitAll()
+                        // 注意：参数配置接口（含 minio.secretKey 等敏感值）必须登录后访问，不可放行 /system/config/**
+                        // 图片预览放行：<img> 标签无法携带 Token，靠对象名白名单保证安全
+                        .requestMatchers(HttpMethod.GET, "/api/sys-api/images/preview/**").permitAll()
                         .requestMatchers("/pdd/oauth_callback").permitAll()
                         // 允许直接访问授权登录接口
                         .requestMatchers(HttpMethod.POST, "/login").permitAll()

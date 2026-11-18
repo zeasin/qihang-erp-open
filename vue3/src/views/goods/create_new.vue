@@ -112,7 +112,7 @@
                 )
             "
                     :before-upload="handleBeforeUpload">
-                    <img v-if="form.colorImages[color]" :src="form.colorImages[color]" class="avatar">
+                    <img v-if="form.colorImages[color]" :src="resolveImageUrl(form.colorImages[color])" class="avatar">
                     <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
                   </el-upload>
                   <span>{{form.colorNames[color]}}</span>
@@ -235,6 +235,7 @@ import { listBrand } from '@/api/goods/brand'
 import { listCategoryAttributeValue } from '@/api/goods/categoryAttributeValue'
 import { addGoods, generateGoodsNumber } from '@/api/goods/goods'
 import { getToken } from '@/utils/auth'
+import { resolveImageUrl } from '@/utils/image'
 import { listSupplier } from '@/api/goods/supplier'
 import { listCategoryAttribute } from '@/api/goods/categoryAttribute'
 import { getDicts } from '@/api/system/dict/data'

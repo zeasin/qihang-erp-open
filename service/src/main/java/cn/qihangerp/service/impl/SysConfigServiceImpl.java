@@ -41,6 +41,16 @@ public class SysConfigServiceImpl extends ServiceImpl<SysConfigMapper, SysConfig
         }
         return "true".equalsIgnoreCase(sysConfigs.get(0).getConfigValue());
     }
+
+    @Override
+    public String selectConfigByKey(String configKey) {
+        if (configKey == null || configKey.isEmpty()) {
+            return null;
+        }
+        List<SysConfig> sysConfigs = configMapper.selectList(
+                new LambdaQueryWrapper<SysConfig>().eq(SysConfig::getConfigKey, configKey));
+        return (sysConfigs == null || sysConfigs.isEmpty()) ? null : sysConfigs.get(0).getConfigValue();
+    }
 }
 
 
