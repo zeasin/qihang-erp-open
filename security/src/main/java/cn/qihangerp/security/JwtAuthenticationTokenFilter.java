@@ -58,6 +58,9 @@ public class JwtAuthenticationTokenFilter extends OncePerRequestFilter {
                 || url.contains("/system/config")
                 || url.contains("/oauth_callback")
                 || url.contains("/sse/notify_msg")
+                // 图片预览：<img> 标签不会携带 Authorization 头，必须在此白名单放行，
+                // 否则会在 Spring Security 的 permitAll 之前被本过滤器返回“授权过期”
+                || url.contains("/images/preview")
         ) {
             // 登录页面，放行 || request.getRequestURI().equals("/order/get_detail")
             chain.doFilter(request, response);
